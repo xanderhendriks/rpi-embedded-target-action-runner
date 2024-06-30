@@ -169,30 +169,139 @@ Download the articact from the **stm32-firmware-sample_application-0.1.0** link 
 Unzip the sample_application-0.1.0.bin and copy it to the thumbdrive which is implemented by the ST-LINK on the NUCLEO board. You should see the application green application LED stop blinking and the green LED next to the USB connector blink green/red for a couple of seconds.
 After the green/red blinking has stopped the green application LED will start blinking again. The NUCLEO is now running the code which was build in the cloud. Looks at the serial terminal and notice how it is now showing **image_id: 1, version: 0.1.0-57ba8d2ac5** instead of the **image_id: 1, version: 0.0.0-debugbuild** from the local execution.
 
+## Creating a github release
+The build artifacts and logs are only kept for 90 days. So if we would want to keep the artifacts we need to create a release.
+
+For this we create the release job. It starts with downloading the artifacts from the build job, followed by some code to get the version number from the filename. The third and final step creates the github release and uploads the artifacts:
+
+    release:
+      needs: [build-sample-application]
+      if: github.ref == 'refs/heads/master'
+      name: Release to Github
+      runs-on: ubuntu-22.04
+      steps:
+        - name: Download artifacts
+          uses: actions/download-artifact@v4.1.7
+          with:
+            path: stm32-firmware
+        - name: Determine version
+          id: determine_version
+          run: |
+            if [ -n "$(find stm32-firmware -name 'stm32-firmware-sample_application-*-dev')" ]
+            then
+                version=0.0.0
+                file_postfix=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\(.*\)/\1/')
+            else
+                version=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\([0-9\.]*\)/\1/')
+                file_postfix=$version
+            fi
+            echo "version=$version" >> $GITHUB_OUTPUT
+            echo "file_postfix=$file_postfix" >> $GITHUB_OUTPUT
+        - name: Release to Github
+          id: create_release
+          uses: ncipollo/release-action@v1.14.0
+          with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            tag: v${{ steps.determine_version.outputs.file_postfix }}
+            name: v${{ steps.determine_version.outputs.file_postfix }}
+            commit: ${{ github.sha }}
+            draft: false
+            prerelease: false
+            artifacts: "stm32-firmware/stm32-firmware-*/*"
+
+Commit and push the changes. Check the output in Github actions. The build fails because by default actions are not allowed to write to the repo. You should also have received an email indicating the failed build. To fix this go to the repo's settings: **Settings -> Actions -> General**
+
+![Github actions 4](images/Github_actions_4.png)
+
+And set the workflow permissions to **Read and write permissions**
+
+![Github actions 5](images/Github_actions_5.png)
+
+Go back to the failed action, press the **Re-run jobs** button and select **Re-run failed jobs**. This option will keep the build results and only retry the Release to Github job. This feature is often used when test on the target don't always produce fully reproducable results.
+
+![Github actions 5](images/Github_actions_6.png)
+
 ## Build output
 Check the ouput of the sample application build step and scroll down to the warning:
 
-![Github actions 2](Github_actions_2.png)
+![Github actions 2](images/Github_actions_2.png)
 
-This warning is actually causing an error in the output value. For this reason an engineering best practice is to always to get the compiler to treat all warnings as errors. When doing this new warnings always need to be resolved right away and can't cause bugs down the road.
+This warning is actually causing an error in the output value, which means our first release has got a bug in it. For this reason an engineering best practice is to always to get the compiler to treat all warnings as errors. When doing this new warnings always need to be resolved right away and can't cause bugs down the road.
 
 To do this for our source code open the properties dialog by right clicking on the **source directory**. It is important to do this configuration of our own sources as doing this for the whole project will generate errors for the STM32 provided code.
 
-![STM32CubeIde properties 1](STM32CubeIde_properties_1.png)
+![STM32CubeIde properties 1](images/STM32CubeIde_properties_1.png)
 
 In the Properties Dialog set the MCU GCC Compiler Warnings as indicated in the following screenshot. Make sure to select **[ All configurations ]**:
 
-![STM32CubeIde properties 2](STM32CubeIde_properties_2.png)
+![STM32CubeIde properties 2](images/STM32CubeIde_properties_2.png)
 
 Commit and push the changes to Github. Check the Action execution.
 
-The action failed. You should also have received an email indicating the failed build. We have now implemented our first level of testing and are using the compiler to filter out any dubious constructs in the code.
+The action failed. We have now implemented our first level of testing and are using the compiler to filter out any dubious constructs in the code.
 
-![Github actions 3](Github_actions_3.png)
+![Github actions 3](images/Github_actions_3.png)
 
-Fix the code. Hint: the **Calculated value: 19** in the serial output is incorrect.
+The error can still be ignored for a specific instance by adding pragmas to tell the compiler it should ignore the error. Modify the code like this:
+
+		if (runCalculation)
+		{
+	#pragma GCC diagnostic push
+	#pragma GCC diagnostic ignored "-Wconversion"
+
+			calculate = Sensor_GetValue() + 20;
+
+	#pragma GCC diagnostic pop
+
+			printf("Calculated value: %hd\n", calculate);
+		}
+
+Commit the code and push the changes and check that the build is passing again. It's best practice to rewrite the code and make it pass. The pragmas can just be convenient for special constructs which are hard to rewrite.
+
+In this particular case the pragma is now hiding a bug. Remove the pragma and fix the code. Hint: the **Calculated value: 19** in the serial output is incorrect.
 Commit and push the changes to make the build pass again.
 Download the binary and see if you get the expected value in the serial output
+
+## Run the pipeline for Pull Requests
+Another best practice is to use pull requests to allow changes on branches to be reviewed before being merged into the master branch. To make sure the code passes the static analysis and can be build, the code on the PR can be told to run the ci pipeline by **adding pull_request** to **on** parameter for the pipeline:
+
+    on:
+      push:
+        branches:
+          - master
+      pull_request:
+
+The **if: github.ref == 'refs/heads/master'** line in the release job makes sure that no release is created for Pull Request builds.
+
+## Branch builds
+In some cases it is desirable to evaluate a new feature or bug fixe without having to merge the code into master for a release. This is where branch releases come in.
+
+Add a **workflow_dispatch** to the **on** parameter to create a button for branch builds:
+
+    on:
+      push:
+        branches:
+          - master
+      pull_request:
+      workflow_dispatch:
+        inputs:
+          release:
+            description: 'Release (y/n)?'
+            required: true
+            default: 'y'
+
+The **Release (y/n)?** question allows to select if a release should be created for the branch build. It defaults to **y**. To allow the **n** option to work the run condition for the release job needs to be updated from: if: **github.ref == 'refs/heads/master'** to **if: github.ref == 'refs/heads/master' || github.event.inputs.release == 'y'** as follows:
+
+    release:
+      needs: [build-docs, build-sample_application]
+      if: github.ref == 'refs/heads/master' || github.event.inputs.release == 'y'
+      name: Release to Github
+      runs-on: ubuntu-20.04
+      steps:
+
+To manually run the pipeline on your branch go to the actions page and press the **Run workflow** button:
+
+![Github actions 7](images/Github_actions_7.png)
 
 # Setup the Github action runner on the RPi
 ## Preparing the SD Card
