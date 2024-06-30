@@ -1,21 +1,34 @@
-#include "main.h"
+//! @file application.c
 
+// Interface for this file
+#include "application.h"
+
+// Standard library includes
 #include <stdio.h>
+#include <stdbool.h>
 
+// Library includes
 #include "cmsis_os.h"
+
+// Application includes
+#include "main.h"
 #include "version.h"
+#include "sensor.h"
+
+static bool runCalculation = true;
 
 void Application_RunDefaultTask(void)
 {
-	int32_t array[5] = {65535};
 	int16_t calculate = 0;
-	
-    printf("image_id: %d, version: %d.%d.%d-%s\n", (int) IMAGE_ID, (int) VERSION_MAJOR, (int) VERSION_MINOR, (int) VERSION_BUGFIX, SHORT_GIT_HASH_STRING);
 
-    printf("First and last values: %ld, %ld\n", array[0], array[5]);
+	printf("image_id: %d, version: %d.%d.%d-%s\n", (int) IMAGE_ID, (int) VERSION_MAJOR, (int) VERSION_MINOR, (int) VERSION_BUGFIX, SHORT_GIT_HASH_STRING);
 
-    calculate = array[0] + 20;
-    printf("Calculated value: %hd\n", calculate);
+    if (runCalculation)
+    {
+    	calculate = Sensor_GetValue() + 20;
+
+		printf("Calculated value: %hd\n", calculate);
+    }
     
 	for(;;)
 	{

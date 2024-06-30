@@ -78,7 +78,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 void StartDefaultTask(void *argument);
-void StartTask02(void *argument);
+void StartBlinkLedTask02(void *argument);
 
 /* USER CODE BEGIN PFP */
 int _write(int fd, char* ptr, int len);
@@ -151,7 +151,7 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* creation of blinkLed */
-  blinkLedHandle = osThreadNew(StartTask02, NULL, &blinkLed_attributes);
+  blinkLedHandle = osThreadNew(StartBlinkLedTask02, NULL, &blinkLed_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -296,18 +296,22 @@ void StartDefaultTask(void *argument)
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartTask02 */
+/* USER CODE BEGIN Header_StartBlinkLedTask02 */
 /**
 * @brief Function implementing the blinkLed thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void *argument)
+/* USER CODE END Header_StartBlinkLedTask02 */
+void StartBlinkLedTask02(void *argument)
 {
-  /* USER CODE BEGIN StartTask02 */
-  Application_RunLedTask();
-  /* USER CODE END StartTask02 */
+  /* USER CODE BEGIN StartBlinkLedTask02 */
+  /* Infinite loop */
+  for(;;)
+  {
+    osDelay(1);
+  }
+  /* USER CODE END StartBlinkLedTask02 */
 }
 
 /**

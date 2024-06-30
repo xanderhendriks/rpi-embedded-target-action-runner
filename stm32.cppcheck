@@ -6,7 +6,18 @@
     <check-unused-templates>true</check-unused-templates>
     <max-ctu-depth>2</max-ctu-depth>
     <max-template-recursion>100</max-template-recursion>
+    <includedir>
+        <dir name="STM32/Core/Inc/"/>
+        <dir name="STM32/Drivers/CMSIS/Include/"/>
+        <dir name="STM32/Drivers/CMSIS/Device/ST/STM32F3xx/Include/"/>
+        <dir name="STM32/Drivers/STM32F3xx_HAL_Driver/Inc/"/>
+        <dir name="STM32/Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS_V2/"/>
+        <dir name="STM32/Middlewares/Third_Party/FreeRTOS/Source/include/"/>
+        <dir name="STM32/Middlewares/Third_Party/FreeRTOS/Source/portable/GCC/ARM_CM4F/"/>
+    </includedir>
     <defines>
+        <define name="__GNUC__"/>
+        <define name="STM32F303x8"/>
         <define name="IMAGE_ID=1"/>
         <define name="SHORT_GIT_HASH=&quot;0123456789&quot;"/>
         <define name="VERSION_BUGFIX=0"/>
@@ -16,5 +27,10 @@
     <paths>
         <dir name="STM32/Source"/>
     </paths>
+    <suppressions>
+        <suppression>missingIncludeSystem</suppression>
+        <suppression>invalidPrintfArgType_sint</suppression>
+        <suppression fileName="STM32\Drivers\CMSIS\Include\core_cm4.h">constVariablePointer</suppression>
+    </suppressions>
     <project-name>stm32</project-name>
 </project>

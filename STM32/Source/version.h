@@ -30,7 +30,7 @@
 #endif
 
 #define SHORT_GIT_HASH_STRING \
-    ((SHORT_GIT_HASH != NULL) && (sizeof(SHORT_GIT_HASH) == 11) ? SHORT_GIT_HASH : "debugbuild")
+    ((SHORT_GIT_HASH != 0) && (sizeof(SHORT_GIT_HASH) == 11) ? SHORT_GIT_HASH : "debugbuild")
 
 #ifndef IMAGE_ID
 #error "define IMAGE_ID in the project properties -> Symbols"

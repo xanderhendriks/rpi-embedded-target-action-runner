@@ -10,7 +10,14 @@ The [NUCLEO-F303K8](https://www.st.com/en/evaluation-tools/nucleo-f303k8.html) u
 
 ![NUCLEO-F303K8](images/NUCLEO-F303K8.png)
 
-# Clone the
+# Fork the workshop repository
+Fork the [xanderhendriks/rpi-embedded-target-action-runner](https://github.com/xanderhendriks/rpi-embedded-target-action-runner) repository:
+
+![Github fork](images/Github_fork.png)
+
+And clone your fork to get a local copy:
+
+`git clone git@github.com:<your_github_username>/rpi-embedded-target-action-runner.git`
 
 # Working with the STM32CubeIde project
 Start the [STM32CubeIde](https://www.st.com/en/development-tools/stm32cubeide.html) and select a directory to use as workspace:
@@ -71,8 +78,121 @@ Configure when to run the action. For now we'll start with all pushes to the mas
         branches:
         - master
 
+Add the jobs entry and define the **build-sample-application** job and name it **Build**. This is the name that will show on the webpage. Keep the name short as long names get abbreviated. We'll run the action on an ubuntu-22.04 cloud runner:
 
+    jobs:
+    build-sample-application:
+        name: Build
+        runs-on: ubuntu-22.04
 
+The first step in the pipeline is cloning the repo:
+
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4.1.7
+
+Then there are a number of steps which implement the versioning as described in [Release versioning](#release-versioning):
+
+    - name: Determine short GIT hash
+      id: short-sha
+      run: |
+        echo "sha=$(echo ${{github.sha}} | sed 's/^\(.\{10\}\).*$/\1/')" >> $GITHUB_OUTPUT
+    - name: Bump version
+      if: github.ref == 'refs/heads/master'
+      id: tag_version
+      uses: mathieudutour/github-tag-action@v6.2
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        dry_run: true
+        default_bump: minor
+        fetch_all_tags: true
+    - name: Version handling
+      id: version_handling
+      run: |
+        # Use the bumped version when on master or otherwise 0.0.0
+        if [ -z ${{ steps.tag_version.outputs.new_tag }} ]
+        then
+          version=0.0.0
+          file_postfix=${{ steps.short-sha.outputs.sha }}-dev
+        else
+          version=${{ steps.tag_version.outputs.new_version }}
+          file_postfix=$version
+        fi
+        echo "version=$version" >> $GITHUB_OUTPUT
+        echo "file_postfix=$file_postfix" >> $GITHUB_OUTPUT
+        echo "major=$(echo $version | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1/')" >> $GITHUB_OUTPUT
+        echo "minor=$(echo $version | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\2/')" >> $GITHUB_OUTPUT
+        echo "bugfix=$(echo $version | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\3/')" >> $GITHUB_OUTPUT
+
+Now finally comes the actual building of the code in the cloud. It uses the code which was cloned in the previous steps and sets the environment variables to get the correct version information in the binary:
+
+    - name: Build the sample_application binary
+      uses: xanderhendriks/action-build-stm32cubeide@v12.0
+      with:
+        project-path: 'STM32'
+        project-target: 'sample_application'
+      env:
+        ENV_VERSION_MAJOR: ${{ steps.version_handling.outputs.major }}
+        ENV_VERSION_MINOR: ${{ steps.version_handling.outputs.minor }}
+        ENV_VERSION_BUGFIX: ${{ steps.version_handling.outputs.bugfix }}
+        ENV_SHORT_GIT_HASH: ${{ steps.short-sha.outputs.sha }}
+
+To enable sharing different versions of the binary the output files are renamed, so they will contain the version information:
+
+    - name: Rename and copy files
+      run: |
+        mkdir stm32-firmware
+        cp STM32/Release/sample_application.bin stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.bin
+        cp STM32/Release/sample_application.elf stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.elf
+        cp STM32/Release/sample_application.list stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.list
+        cp STM32/Release/sample_application.map stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.map
+
+And finally the files are uploaded to Github to allow them to be used in other jobs:
+
+    - name: Upload sample_application artifacts
+      uses: actions/upload-artifact@v4.3.3
+      with:
+        name: stm32-firmware-sample_application-${{ steps.version_handling.outputs.file_postfix }}
+        path: stm32-firmware
+
+Commit and push the changes and check the execution of the action in github. It should look like this:
+
+![Github actions 1](images/Github_actions_1.png)
+
+## Build artifacts
+Download the articact from the **stm32-firmware-sample_application-0.1.0** link at the bottom of the page. The donloaded zip contains the following files:
+- sample_application-0.1.0.bin: Binary file which can be deployed to the target
+- sample_application-0.1.0.elf: Binary file including symbols. Used for the debugger.
+- sample_application-0.1.0.list: Linker output showing the assembly code resulting from the compiler
+- sample_application-0.1.0.map: Linker output showing the memory locations for all symbols in the code
+
+Unzip the sample_application-0.1.0.bin and copy it to the thumbdrive which is implemented by the ST-LINK on the NUCLEO board. You should see the application green application LED stop blinking and the green LED next to the USB connector blink green/red for a couple of seconds.
+After the green/red blinking has stopped the green application LED will start blinking again. The NUCLEO is now running the code which was build in the cloud. Looks at the serial terminal and notice how it is now showing **image_id: 1, version: 0.1.0-57ba8d2ac5** instead of the **image_id: 1, version: 0.0.0-debugbuild** from the local execution.
+
+## Build output
+Check the ouput of the sample application build step and scroll down to the warning:
+
+![Github actions 2](Github_actions_2.png)
+
+This warning is actually causing an error in the output value. For this reason an engineering best practice is to always to get the compiler to treat all warnings as errors. When doing this new warnings always need to be resolved right away and can't cause bugs down the road.
+
+To do this for our source code open the properties dialog by right clicking on the **source directory**. It is important to do this configuration of our own sources as doing this for the whole project will generate errors for the STM32 provided code.
+
+![STM32CubeIde properties 1](STM32CubeIde_properties_1.png)
+
+In the Properties Dialog set the MCU GCC Compiler Warnings as indicated in the following screenshot. Make sure to select **[ All configurations ]**:
+
+![STM32CubeIde properties 2](STM32CubeIde_properties_2.png)
+
+Commit and push the changes to Github. Check the Action execution.
+
+The action failed. You should also have received an email indicating the failed build. We have now implemented our first level of testing and are using the compiler to filter out any dubious constructs in the code.
+
+![Github actions 3](Github_actions_3.png)
+
+Fix the code. Hint: the **Calculated value: 19** in the serial output is incorrect.
+Commit and push the changes to make the build pass again.
+Download the binary and see if you get the expected value in the serial output
 
 # Setup the Github action runner on the RPi
 ## Preparing the SD Card
@@ -82,9 +202,9 @@ The SD Card for this project was created using the Windows version of the [Raspb
 
 Here is a clearer image of the image selection, as it is important to select the Bullseye legacy image. In the latest image the openocd tool can't be configured to the working, 0.11.0~rc2-1, version.
 
-![Raspberry Pi Imager 1](images/rpi_imager_1a.png)
+![Raspberry Pi Imager 1a](images/rpi_imager_1a.png)
 
-In the second dialog some inital setup of the RPi can be configured. It is good practice to use a unique hostname here, so it will be easy to access the device without having to use a monitor and keyboard. The dialog also allows the wirless network details to be given and a configuration of the timezone the device will be operating in.
+In the second dialog some inital setup of the RPi can be configured. It is good practice to use a unique hostname here, so it will be easy to access the device without having to use a monitor and keyboard. The dialog also allows the wireless network details to be given and a configuration of the timezone the device will be operating in.
 
 ![Raspberry Pi Imager 2](images/rpi_imager_2.png)
 
