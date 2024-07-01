@@ -10,6 +10,12 @@ The [NUCLEO-F303K8](https://www.st.com/en/evaluation-tools/nucleo-f303k8.html) u
 
 ![NUCLEO-F303K8](images/NUCLEO-F303K8.png)
 
+# Software used
+- [STM32CubeIDE 1.15.1](https://www.st.com/en/development-tools/stm32cubeide.html)
+- [TeraTerm 5.2](https://github.com/TeraTermProject/teraterm/releases) (Or other terminal program)
+- [Docker](https://www.docker.com/products/docker-desktop/)
+- [Github account](https://github.com/)
+
 # Fork the workshop repository
 Fork the [xanderhendriks/rpi-embedded-target-action-runner](https://github.com/xanderhendriks/rpi-embedded-target-action-runner) repository:
 
@@ -17,7 +23,7 @@ Fork the [xanderhendriks/rpi-embedded-target-action-runner](https://github.com/x
 
 And clone your fork to get a local copy:
 
-`git clone git@github.com:<your_github_username>/rpi-embedded-target-action-runner.git`
+`git clone https://github.com/<your_github_username>/rpi-embedded-target-action-runner.git`
 
 # Working with the STM32CubeIde project
 Start the [STM32CubeIde](https://www.st.com/en/development-tools/stm32cubeide.html) and select a directory to use as workspace:
@@ -302,6 +308,48 @@ The **Release (y/n)?** question allows to select if a release should be created 
 To manually run the pipeline on your branch go to the actions page and press the **Run workflow** button:
 
 ![Github actions 7](images/Github_actions_7.png)
+
+## Add unit test
+# Execute locally
+Start a docker in the repo's root directory: `docker run -it --rm --name ccputest -v ${PWD}:/workarea xanderhendriks/cpputest:1.0`
+
+Inside the docker run the following commands:
+- `cd /workarea/unit_test/crc`
+- `mkdir build`
+- `cmake ..`
+- `make`
+
+The test output indicates that one of the checks in in the CRC unit test is failing. Fix the test by updating the expected crc value
+
+# Execute in Github actions
+Add the unit test job in between the build and release jobs:
+
+    unit-test:
+      needs: analyse-code
+      name: Unit test
+      runs-on: ubuntu-20.04
+      container:
+        image: xanderhendriks/cpputest:1.0
+      steps:
+        - name: Checkout the repository
+          uses: actions/checkout@v4.1.7
+        - name: Build and run unit test
+          run: |
+            cd unit_test/crc
+            mkdir build
+            cd build
+            cmake ..
+            make
+        - name: Publish Test Report
+          uses: mikepenz/action-junit-report@v4
+          if: success() || failure() # always run even if the previous step fails
+          with:
+            report_paths: 'unit_test/*/build/tests/cpputest_*.xml'
+
+And update the release to wait for both the build and the unit test execution:
+
+    release:
+      needs: [unit-test, build-sample-application]
 
 # Setup the Github action runner on the RPi
 ## Preparing the SD Card
