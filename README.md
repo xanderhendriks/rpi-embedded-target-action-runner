@@ -25,7 +25,7 @@ Start the [STM32CubeIde](https://www.st.com/en/development-tools/stm32cubeide.ht
 ![STM32CubeIde launcher](images/STM32CubeIde_launcher.png)
 
 ## Importing the project
-And import the project from STM32 directory:
+And import the project from application directory:
 
 ![STM32CubeIde open project from file system 1](images/STM32CubeIde_open_project_from_file_system_1.png)
 
@@ -62,7 +62,7 @@ A branch build has to be kicked off manually if it needs to be released. Otherwi
 When a developer builds the code on his system the version is set 0.0.0 and the githash to **debugbuild**. As these builds could rely upon the individual configuration of the developer's sytem, these builds should never make it out into the field. The name of the binary is the default from the IDE: sample_application.bin
 
 ## IDE version information handling
-In order to make sure that the firmware can report the correct version it needs to be given the version details as part of the build. In this project this is done with the [STM32/makefile.defs](STM32/makefile.defs). This file links environment variables ENV_VERSION_XXX to MAKE_VERSION_XXX, which in the IDE are presented with the defines VERSION_XXX through the Paths and Symbols dialog:
+In order to make sure that the firmware can report the correct version it needs to be given the version details as part of the build. In this project this is done with the [application/makefile.defs](application/makefile.defs). This file links environment variables ENV_VERSION_XXX to MAKE_VERSION_XXX, which in the IDE are presented with the defines VERSION_XXX through the Paths and Symbols dialog:
 
 ![STM32CubeIde paths and symbols](images/STM32CubeIde_paths_and_symbols.png)
 
@@ -129,7 +129,7 @@ Now finally comes the actual building of the code in the cloud. It uses the code
     - name: Build the sample_application binary
       uses: xanderhendriks/action-build-stm32cubeide@v12.0
       with:
-        project-path: 'STM32'
+        project-path: 'application'
         project-target: 'sample_application'
       env:
         ENV_VERSION_MAJOR: ${{ steps.version_handling.outputs.major }}
@@ -142,10 +142,10 @@ To enable sharing different versions of the binary the output files are renamed,
     - name: Rename and copy files
       run: |
         mkdir stm32-firmware
-        cp STM32/Release/sample_application.bin stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.bin
-        cp STM32/Release/sample_application.elf stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.elf
-        cp STM32/Release/sample_application.list stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.list
-        cp STM32/Release/sample_application.map stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.map
+        cp application/Release/sample_application.bin stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.bin
+        cp application/Release/sample_application.elf stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.elf
+        cp application/Release/sample_application.list stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.list
+        cp application/Release/sample_application.map stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.map
 
 And finally the files are uploaded to Github to allow them to be used in other jobs:
 

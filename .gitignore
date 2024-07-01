@@ -1,3 +1,4 @@
-STM32/.settings/*
-STM32/Debug/*
-STM32/Release/*
+application/.settings/*
+application/Debug/*
+application/Release/*
+unit_test/*/build/*
