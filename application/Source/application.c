@@ -15,6 +15,8 @@
 #include "version.h"
 #include "sensor.h"
 
+extern UART_HandleTypeDef huart2;
+
 void Application_RunDefaultTask(void)
 {
 	int16_t calculate = 0;
@@ -27,7 +29,23 @@ void Application_RunDefaultTask(void)
 
 	for(;;)
 	{
-		osDelay(1000);
+		uint8_t data[1];
+
+		if (HAL_UART_Receive(&huart2, (uint8_t *) data, 1, 0) == HAL_OK)
+		{
+			switch(data[0])
+			{
+			case 'v':
+				printf("image_id: %d, version: %d.%d.%d-%s\n", (int) IMAGE_ID, (int) VERSION_MAJOR, (int) VERSION_MINOR, (int) VERSION_BUGFIX, SHORT_GIT_HASH_STRING);
+				break;
+
+			case 's':
+				printf("sensor: %d\n", Sensor_GetValue());
+				break;
+			}
+		}
+
+		osDelay(10);
 	}
 }
 
