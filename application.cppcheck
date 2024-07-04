@@ -29,7 +29,7 @@
     </paths>
     <suppressions>
         <suppression>missingIncludeSystem</suppression>
-        <suppression>invalidPrintfArgType_sint</suppression>
+        <!-- <suppression>invalidPrintfArgType_sint</suppression> -->
         <suppression fileName="application\Drivers\CMSIS\Include\core_cm4.h">constVariablePointer</suppression>
     </suppressions>
     <project-name>application</project-name>

@@ -2,3 +2,6 @@ application/.settings/*
 application/Debug/*
 application/Release/*
 unit_test/*/build/*
+.venv/*
+python/**/*.pyc
+test-system-output/*

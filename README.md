@@ -175,7 +175,7 @@ Download the articact from the **stm32-firmware-sample_application-0.1.0** link 
 Unzip the sample_application-0.1.0.bin and copy it to the thumbdrive which is implemented by the ST-LINK on the NUCLEO board. You should see the application green application LED stop blinking and the green LED next to the USB connector blink green/red for a couple of seconds.
 After the green/red blinking has stopped the green application LED will start blinking again. The NUCLEO is now running the code which was build in the cloud. Looks at the serial terminal and notice how it is now showing **image_id: 1, version: 0.1.0-57ba8d2ac5** instead of the **image_id: 1, version: 0.0.0-debugbuild** from the local execution.
 
-## Creating a github release
+# Creating a github release
 The build artifacts and logs are only kept for 90 days. So if we would want to keep the artifacts we need to create a release.
 
 For this we create the release job. It starts with downloading the artifacts from the build job, followed by some code to get the version number from the filename. The third and final step creates the github release and uploads the artifacts:
@@ -268,7 +268,7 @@ In this particular case the pragma is now hiding a bug. Remove the pragma and fi
 Commit and push the changes to make the build pass again.
 Download the binary and see if you get the expected value in the serial output
 
-## Run the pipeline for Pull Requests
+# Run the pipeline for Pull Requests
 Another best practice is to use pull requests to allow changes on branches to be reviewed before being merged into the master branch. To make sure the code passes the static analysis and can be build, the code on the PR can be told to run the ci pipeline by **adding pull_request** to **on** parameter for the pipeline:
 
     on:
@@ -279,7 +279,7 @@ Another best practice is to use pull requests to allow changes on branches to be
 
 The **if: github.ref == 'refs/heads/master'** line in the release job makes sure that no release is created for Pull Request builds.
 
-## Branch builds
+# Branch builds
 In some cases it is desirable to evaluate a new feature or bug fixe without having to merge the code into master for a release. This is where branch releases come in.
 
 Add a **workflow_dispatch** to the **on** parameter to create a button for branch builds:
@@ -309,8 +309,8 @@ To manually run the pipeline on your branch go to the actions page and press the
 
 ![Github actions 7](images/Github_actions_7.png)
 
-## Add unit test
-# Execute locally
+# Add unit test
+## Execute locally
 Start a docker in the repo's root directory: `docker run -it --rm --name ccputest -v ${PWD}:/workarea xanderhendriks/cpputest:1.0`
 
 Inside the docker run the following commands:
@@ -321,7 +321,7 @@ Inside the docker run the following commands:
 
 The test output indicates that one of the checks in in the CRC unit test is failing. Fix the test by updating the expected crc value
 
-# Execute in Github actions
+## Execute in Github actions
 Add the unit test job in between the build and release jobs:
 
     unit-test:
@@ -369,16 +369,30 @@ The final dialog is left to default to enable the SSH out of the box for headles
 
 ![Raspberry Pi Imager 3](images/rpi_imager_3.png)
 
-# Prepare RPi action runner
+## Install the RPi action runner
 login to the RPi using ssh:
 
-`ssh pi@nxs-1`
+`ssh pi@nxs-x`
 
 After starting the RPi for the first time it is good practice to run the update and upgrade commands to make sure that the latest (security) updates are installed for the OS:
 `sudo apt update ; sudo apt upgrade -y`
 
 Install openocd which is used for programming the NUCLEO board:
-`sudo apt install openocd=0.11.0~rc2-1`
+`sudo apt install openocd=0.11.0~rc2-1 python3-venv python3-dev`
 
 NOTE that when `sudo apt upgrade` is run again that the openocd package will be upgraded to a later version which fails during flash write on the STM32 MCU. If this happens just run the above command again to downgrade the openocd to the 0.11.0~rc2-1 again.
+
+In github go to the forked repo's **Settings -> Actions -> Runners** and press the **New self hosted runner**:
+
+![Github runners 1](images/Github_runners_1.png)
+
+On the next page select **Linux**, **ARM64** and foolow the instructions:
+
+![Github runners 2](images/Github_runners_2.png)
+
+When running the config make sure add a label for the type of test the device will be running. In our case something like system. This way you don't have to use the host name to select the device to execute the test on. And you can have multiple devices executing the same test if required  to speed things up.
+
+![Github runners 3](images/Github_runners_3.png)
+
+Instead of the final `./run.sh` command run `sudo ./svc.sh --help` to show the options for configuring the action runner as a service. You'll need the `sudo ./svc.sh install` command. This will make sure the acion runner is installed as a service, which will make it start automatically upon reboot of the RPi. Now either start the service with `sudo ./svc.sh start` or use `sudo reboot` to reboot the device.
 
