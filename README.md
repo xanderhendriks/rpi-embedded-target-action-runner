@@ -108,6 +108,17 @@ In order to make sure that the firmware can report the correct version it needs 
 
 ![STM32CubeIde paths and symbols](images/STM32CubeIde_paths_and_symbols.png)
 
+# Continuous integration
+Automated builds have the advantage that they allow for a very controlled way of building the firmware resulting in the same binary every time. Even when going back in time when version information is kept with the build scripts. This reduces the risk of local changes on an engineer's computer causing issues with the build.
+It also allows for frequent builds and tests which increases confidence in the quality of the firmware.
+
+Some of the common tools used for contious integration:
+- [Github Actions](https://github.com/features/actions)
+- [Bitbucket Pipelines](https://bitbucket.org/product/features/pipelines)
+- [CircleCI](https://circleci.com/)
+- [Jenkins](https://www.jenkins.io/) (Self hosted)
+
+
 # Github action for building code
 Create a file called .github/workflows/ci_pipeline.yml and add the following pipeline name:
 
