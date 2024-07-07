@@ -462,13 +462,15 @@ The final dialog is left to default to enable the SSH out of the box for headles
 ### Install the RPi action runner
 login to the RPi using ssh. Add the -L to forward port 22 to allow sftp file transfer on localhost:
 
-`ssh pi@nxs-<RPi identifier> -L 22:nxs-<RPi identifier>:22`
+    ssh pi@nxs-<RPi identifier> -L 22:nxs-<RPi identifier>:22
 
 After starting the RPi for the first time it is good practice to run the update and upgrade commands to make sure that the latest (security) updates are installed for the OS:
-`sudo apt update ; sudo apt upgrade -y`
+
+    sudo apt update ; sudo apt upgrade -y
 
 Install openocd which is used for programming the NUCLEO board:
-`sudo apt install openocd=0.11.0~rc2-1 python3-venv python3-dev`
+
+    sudo apt install openocd=0.11.0~rc2-1 python3-venv python3-dev
 
 NOTE that when `sudo apt upgrade` is run again that the openocd package will be upgraded to a later version which fails during flash write on the STM32 MCU. If this happens just run the above command again to downgrade the openocd to the 0.11.0~rc2-1 again.
 
