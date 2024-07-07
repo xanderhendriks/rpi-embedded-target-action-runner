@@ -11,10 +11,13 @@ The [NUCLEO-F303K8](https://www.st.com/en/evaluation-tools/nucleo-f303k8.html) u
 ![NUCLEO-F303K8](images/NUCLEO-F303K8.png)
 
 # Software used
+Install the following software locally:
 - [STM32CubeIDE 1.15.1](https://www.st.com/en/development-tools/stm32cubeide.html)
 - [TeraTerm 5.2](https://github.com/TeraTermProject/teraterm/releases) (Or other terminal program)
 - [Docker](https://www.docker.com/products/docker-desktop/)
-- [Github account](https://github.com/)
+
+# Accounts used
+- [Github](https://github.com/)
 
 # Fork the workshop repository
 Fork the [xanderhendriks/rpi-embedded-target-action-runner](https://github.com/xanderhendriks/rpi-embedded-target-action-runner) repository:
@@ -166,7 +169,7 @@ Commit and push the changes and check the execution of the action in github. It 
 ![Github actions 1](images/Github_actions_1.png)
 
 ## Build artifacts
-Download the articact from the **stm32-firmware-sample_application-0.1.0** link at the bottom of the page. The donloaded zip contains the following files:
+Download the articact from the **stm32-firmware-sample_application-0.1.0** link at the bottom of the page. The downloaded zip contains the following files:
 - sample_application-0.1.0.bin: Binary file which can be deployed to the target
 - sample_application-0.1.0.elf: Binary file including symbols. Used for the debugger.
 - sample_application-0.1.0.list: Linker output showing the assembly code resulting from the compiler
@@ -234,7 +237,7 @@ Check the ouput of the sample application build step and scroll down to the warn
 
 This warning is actually causing an error in the output value, which means our first release has got a bug in it. For this reason an engineering best practice is to always to get the compiler to treat all warnings as errors. When doing this new warnings always need to be resolved right away and can't cause bugs down the road.
 
-To do this for our source code open the properties dialog by right clicking on the **source directory**. It is important to do this configuration of our own sources as doing this for the whole project will generate errors for the STM32 provided code.
+To do this for our source code open the properties dialog by right clicking on the **source directory**. It is important to do this configuration of our own sources as doing this for the whole project will generate errors for the STM32 provided code and we don't want to cleanup their code as well.
 
 ![STM32CubeIde properties 1](images/STM32CubeIde_properties_1.png)
 
@@ -267,6 +270,39 @@ Commit the code and push the changes and check that the build is passing again. 
 In this particular case the pragma is now hiding a bug. Remove the pragma and fix the code. Hint: the **Calculated value: 19** in the serial output is incorrect.
 Commit and push the changes to make the build pass again.
 Download the binary and see if you get the expected value in the serial output
+
+# Static analysis
+Another suite of tools that can help reducing potential bugs are static analysis tools. They check the code and point out code constructs that are know to cause bugs while maintaining the code. A common quote: "Code is written once, but read many times". We better make sure the person who has to modify the code after us can understand what we have done. It may even just be our future self 3 months down the road.
+
+[Wikipidea](https://en.wikipedia.org/wiki/List_of_tools_for_static_code_analysis) has a good list of available tools. Both free and paid. Here we'll be using cppcheck a free tool for static analysis.
+
+## Execute locally
+Start a docker in the repo's root directory: `docker run -it --rm --entrypoint /bin/sh --name cppcheck -v ${PWD}:/workarea neszt/cppcheck-docker`
+
+Inside the docker run the following commands:
+- `cd /workarea`
+- `cppcheck --enable=all --inline-suppr --project=application.cppcheck`
+
+## Execute in Github actions
+Add the analyse job before the build job:
+
+    analyse-code:
+      name: Analyse
+      runs-on: ubuntu-24.04
+      steps:
+        - name: Checkout the repository
+          uses: actions/checkout@v4.1.7
+        - name: cppcheck
+          run: |
+            sudo apt-get install -y cppcheck
+            cppcheck --enable=all --inline-suppr --project=application.cppcheck --error-exitcode=-1
+
+And update the build to wait for both analyse step execution:
+
+    build-sample-application:
+      needs: analyse-code
+
+Push the change to ci_pipeline.yml and check that the step fails with the same recommendations. Fix the code and push again.
 
 # Run the pipeline for Pull Requests
 Another best practice is to use pull requests to allow changes on branches to be reviewed before being merged into the master branch. To make sure the code passes the static analysis and can be build, the code on the PR can be told to run the ci pipeline by **adding pull_request** to **on** parameter for the pipeline:
@@ -305,6 +341,7 @@ The **Release (y/n)?** question allows to select if a release should be created 
       runs-on: ubuntu-20.04
       steps:
 
+Create a branch of master and run the pipeline on it. See how the version number is different.
 To manually run the pipeline on your branch go to the actions page and press the **Run workflow** button:
 
 ![Github actions 7](images/Github_actions_7.png)
@@ -351,8 +388,30 @@ And update the release to wait for both the build and the unit test execution:
     release:
       needs: [unit-test, build-sample-application]
 
-# Setup the Github action runner on the RPi
-## Preparing the SD Card
+# Add system test
+For the system test we need to be able to verify that all it's interfaces are working as expected. This is typically done as a black box test where without knowlegde of the code the external interfaces are monitored and controlled. This can be done in different ways. You could hook up hardware that mimics the communication of sensors and actuators or you could have the real hardware with some extra hardware around it which can be controlled or monitored from the system test.
+
+In the case of the sample application we only have 1 fake sensor to read. As the device doesn't publish the value of the sensor in any way, there is no way for the system test to access the value. For ease of testing and debugging it is good practice to add an interface that allows functions to be executed on the target device. This allows for faster testing by forcing things to happen in a shorter timespan than required for normal operation. Think of an IoT product only advertising every 15 minutes.
+
+Our sample application has a very basic interface for this. It uses the same serial interface we have seen working in the terminal before. Try it by running the code and typing the characters v and s in the terminal. The device will respond with the version information and its sensror value. These are the commands we'll use in the system test to veify the code.
+
+## Execute locally
+To execute the system test locally run the following commands:
+- `cd <rpi-embedded-target-action-runner directory>`
+- Create a virtual Python environment: `python -m venv .venv`
+- Activate the virtual environment: `.venv\Scripts\activate.bat`, for linux: `. .venv\bin\activate`
+- Install dependencies: `pip install -r python/requirements.txt`
+- Run the test: `pytest -rP system_test --st-link-com-port=<Port used in terminal>`
+
+If you were running the released version we loaded before then you'll see an error because it detected the wrong version of firmware. To make sure the test is getting the version we are expecting the version and githash can be passed as parameters on the command line:
+`pytest -rP system_test --st-link-com-port=<Port used in terminal> --version-to-check=<your code version> --git-hash-to-check=<your code githash>`
+
+Now the test should pass. Have a look at the 2 python files in the **system_test** directory to understand what is being tested. The test uses the pytest framework for the test execution.
+
+## Execute on the RPi action runner
+To execute the test on the target connected to the RPi, first an SD Card needs to be created with an OS for the RPi. After which the RPi can be linked to the repo as an action runner.
+
+### Preparing the SD Card
 The SD Card for this project was created using the Windows version of the [Raspberry Pi Imager](https://www.raspberrypi.com/software/). On the first page of the tool select which RPi version to create an image for, Which image to use and which SD Card to write it to. Here we are using an RPi3 and the Raspberry OS Lite (Legacy, 64-bit):
 
 ![Raspberry Pi Imager 1](images/rpi_imager_1.png)
@@ -369,7 +428,7 @@ The final dialog is left to default to enable the SSH out of the box for headles
 
 ![Raspberry Pi Imager 3](images/rpi_imager_3.png)
 
-## Install the RPi action runner
+### Install the RPi action runner
 login to the RPi using ssh:
 
 `ssh pi@nxs-x`
@@ -386,7 +445,7 @@ In github go to the forked repo's **Settings -> Actions -> Runners** and press t
 
 ![Github runners 1](images/Github_runners_1.png)
 
-On the next page select **Linux**, **ARM64** and foolow the instructions:
+On the next page select **Linux**, **ARM64** and follow the instructions:
 
 ![Github runners 2](images/Github_runners_2.png)
 
@@ -396,3 +455,75 @@ When running the config make sure add a label for the type of test the device wi
 
 Instead of the final `./run.sh` command run `sudo ./svc.sh --help` to show the options for configuring the action runner as a service. You'll need the `sudo ./svc.sh install` command. This will make sure the acion runner is installed as a service, which will make it start automatically upon reboot of the RPi. Now either start the service with `sudo ./svc.sh start` or use `sudo reboot` to reboot the device.
 
+### Pipeline update
+Add the system test job in between the unit_test and release jobs. Unlike the unit test, this test can only start once the binary has been build and as such has the build in its **needs** list. The **runs-on** indicates that we would like the code to run on our self-hosted device with the system label. The **concurrency** makse sure that when multiple pipelines are running in paralell that only one at the time will execute the system test. The steps execute the usual checkout and download the binary from the build step. To make sure we know which version and githash to expect, these numbers are rertieved from the repo and the binary name:
+
+    system-test:
+      needs: build-sample-application
+      name: System test
+      concurrency: system
+      runs-on: [self-hosted, system]
+      steps:
+        - name: Checkout the repository
+          uses: actions/checkout@v4.1.7
+        - name: Determine short GIT hash
+          id: short-sha
+          run: |
+            echo "sha=$(echo ${{github.sha}} | sed 's/^\(.\{10\}\).*$/\1/')" >> $GITHUB_OUTPUT
+        - name: Download artifacts
+          uses: actions/download-artifact@v4.1.7
+          with:
+            path: stm32-firmware
+        - name: Determine version
+          id: determine_version
+          run: |
+            if [ -n "$(find stm32-firmware -name 'stm32-firmware-sample_application-*-dev')" ]
+            then
+                version=0.0.0
+                file_postfix=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\(.*\)/\1/')
+            else
+                version=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\([0-9\.]*\)/\1/')
+                file_postfix=$version
+            fi
+            echo "version=$version" >> $GITHUB_OUTPUT
+            echo "file_postfix=$file_postfix" >> $GITHUB_OUTPUT
+
+The the binary file is programmed into the target:
+
+    - name: Update firmware on target
+      run: |
+        openocd -f interface/stlink.cfg -f target/stm32f3x.cfg -c "program $(find stm32-firmware/stm32-firmware-sample_application-*/ -name sample_application*.bin) verify reset exit 0x8000000"
+
+After which the Python environment is setup and the actual test executed:
+
+    - name: Create virtual environment and install dependencies
+      run: |
+        python3 -m venv ~/actions-runner/_venv
+        . ~/actions-runner/_venv/bin/activate
+        python3 -m pip install --upgrade pip==22.1.2
+        pip install -r python/requirements.txt
+    - name: Run System Test
+      run: |
+        . ~/actions-runner/_venv/bin/activate
+        mkdir test-system-output
+        pytest -rP system_test --version-to-check=${{ steps.determine_version.outputs.version }} --git-hash-to-check=${{ steps.short-sha.outputs.sha }} --junitxml=test-system-output/test_system_junit.xml
+
+Finally the test results which have been configured to be in the junit format are uploaded to the repo together with any other files that were dumped in the **test-system-output** directory:
+
+    - name: Publish system test results
+      uses: EnricoMi/publish-unit-test-result-action/linux@v2.16.1
+      if: always()
+      with:
+        check_name: System test results
+        junit_files: test-system-output/test_system_junit.xml
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Upload system test artifacts
+      uses: actions/upload-artifact@v4.3.3
+      if: always()
+      with:
+        name: test-system-output
+        path: test-system-output
+
+Hook the NUCLEO up to the USB on the RPi and psuh the updated pipeline. The complete output should now look like this:
+
+![Github actions 8](images/Github_actions_8.png)

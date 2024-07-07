@@ -4,4 +4,4 @@ application/Release/*
 unit_test/*/build/*
 .venv/*
 python/**/*.pyc
-test-system-output/*
+system_test/**/*.pyc

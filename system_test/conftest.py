@@ -38,8 +38,8 @@ class SerialCommandResponse:
 
 
 @pytest.fixture(scope="session")
-def serial_command_response(request):
-    return SerialCommandResponse(request.config.getoption('--st-link-com-port'))
+def serial_command_response(pytestconfig):
+    return SerialCommandResponse(pytestconfig.config.getoption('--st-link-com-port'))
 
 
 class PowerControl():
