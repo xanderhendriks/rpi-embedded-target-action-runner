@@ -429,9 +429,9 @@ The final dialog is left to default to enable the SSH out of the box for headles
 ![Raspberry Pi Imager 3](images/rpi_imager_3.png)
 
 ### Install the RPi action runner
-login to the RPi using ssh:
+login to the RPi using ssh. Add the -L to forward port 22 to allow sftp file transfer on localhost:
 
-`ssh pi@nxs-x`
+`ssh pi@nxs-<RPi identifier> -L 22:nxs-<RPi identifier>:22`
 
 After starting the RPi for the first time it is good practice to run the update and upgrade commands to make sure that the latest (security) updates are installed for the OS:
 `sudo apt update ; sudo apt upgrade -y`
