@@ -496,7 +496,7 @@ After starting the RPi for the first time it is good practice to run the update 
 
 Install openocd which is used for programming the NUCLEO board:
 
-    sudo apt install openocd=0.11.0~rc2-1 python3-venv python3-dev
+    sudo apt install -y openocd=0.11.0~rc2-1 python3-venv python3-dev
 
 NOTE that when `sudo apt upgrade` is run again that the openocd package will be upgraded to a later version which fails during flash write on the STM32 MCU. If this happens just run the above command again to downgrade the openocd to the 0.11.0~rc2-1 again.
 
@@ -586,3 +586,6 @@ Finally the test results which have been configured to be in the junit format ar
 Hook the NUCLEO up to the USB on the RPi and psuh the updated pipeline. The complete output should now look like this:
 
 ![Github actions 8](images/Github_actions_8.png)
+
+## Make it your own
+You can use the different interfaces on the Raspberry Pi, such as USB, SPI, GPIO, UART, Ethernet to add other hardware that interacts with the system test. Have a look at the [PowerControl in the conftest.py](https://github.com/xanderhendriks/rpi-embedded-target-action-runner/blob/master/system_test/conftest.py#L45) for an example of how a GPIO pin is used to control a relay to power cycle the device under test (DUT).
