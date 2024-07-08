@@ -39,8 +39,9 @@ void Application_RunDefaultTask(void)
 				printf("image_id: %d, version: %d.%d.%d-%s\n", (int) IMAGE_ID, (int) VERSION_MAJOR, (int) VERSION_MINOR, (int) VERSION_BUGFIX, SHORT_GIT_HASH_STRING);
 				break;
 
+			default:
 			case 's':
-				printf("sensor: %d\n", Sensor_GetValue());
+				printf("sensor: %ld\n", Sensor_GetValue());
 				break;
 			}
 		}

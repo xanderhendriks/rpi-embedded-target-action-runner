@@ -309,17 +309,12 @@ The action failed. We have now implemented our first level of testing and are us
 
 The error can still be ignored for a specific instance by adding pragmas to tell the compiler it should ignore the error. Modify the code like this:
 
-		if (runCalculation)
-		{
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wconversion"
+    #pragma GCC diagnostic push
+    #pragma GCC diagnostic ignored "-Wconversion"
 
-			calculate = Sensor_GetValue() + 20;
+        calculate = Sensor_GetValue() + 20;
 
-	#pragma GCC diagnostic pop
-
-			printf("Calculated value: %hd\n", calculate);
-		}
+    #pragma GCC diagnostic pop
 
 Commit the code and push the changes and check that the build is passing again. It's best practice to rewrite the code and make it pass. The pragmas can just be convenient for special constructs which are hard to rewrite.
 
