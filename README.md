@@ -278,6 +278,14 @@ Go back to the failed action, press the **Re-run jobs** button and select **Re-r
 
 ![Github actions 5](images/Github_actions_6.png)
 
+Go to the landing page for the repository and see the latest release shown on the page:
+
+![Github releases 1](images/Github_releases_1.png)
+
+When you click the **Releases** label or go directly to the [releases](/releases) url then you can see all releases. It is good practice to use the edit button to add a proper description for the release, so the list can be used for release notes.
+
+![Github releases 2](images/Github_releases_2.png)
+
 ## Build output
 Check the ouput of the sample application build step and scroll down to the warning:
 
