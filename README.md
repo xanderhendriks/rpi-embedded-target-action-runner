@@ -183,26 +183,26 @@ Then there are a number of steps which implement the versioning as described in 
 
 Now finally comes the actual building of the code in the cloud. It uses the code which was cloned in the previous steps and sets the environment variables to get the correct version information in the binary:
 
-        - name: Build the sample_application binary
-          uses: xanderhendriks/action-build-stm32cubeide@v12.0
-          with:
-            project-path: 'application'
-            project-target: 'sample_application'
-          env:
-            ENV_VERSION_MAJOR: ${{ steps.version_handling.outputs.major }}
-            ENV_VERSION_MINOR: ${{ steps.version_handling.outputs.minor }}
-            ENV_VERSION_BUGFIX: ${{ steps.version_handling.outputs.bugfix }}
-            ENV_SHORT_GIT_HASH: ${{ steps.short-sha.outputs.sha }}
+          - name: Build the sample_application binary
+            uses: xanderhendriks/action-build-stm32cubeide@v12.0
+            with:
+              project-path: 'application'
+              project-target: 'sample_application'
+            env:
+              ENV_VERSION_MAJOR: ${{ steps.version_handling.outputs.major }}
+              ENV_VERSION_MINOR: ${{ steps.version_handling.outputs.minor }}
+              ENV_VERSION_BUGFIX: ${{ steps.version_handling.outputs.bugfix }}
+              ENV_SHORT_GIT_HASH: ${{ steps.short-sha.outputs.sha }}
 
 To enable sharing different versions of the binary the output files are renamed, so they will contain the version information:
 
-        - name: Rename and copy files
-          run: |
-            mkdir stm32-firmware
-            cp application/Release/sample_application.bin stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.bin
-            cp application/Release/sample_application.elf stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.elf
-            cp application/Release/sample_application.list stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.list
-            cp application/Release/sample_application.map stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.map
+          - name: Rename and copy files
+            run: |
+              mkdir stm32-firmware
+              cp application/Release/sample_application.bin stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.bin
+              cp application/Release/sample_application.elf stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.elf
+              cp application/Release/sample_application.list stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.list
+              cp application/Release/sample_application.map stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.map
 
 And finally the files are uploaded to Github to allow them to be used in other jobs:
 
