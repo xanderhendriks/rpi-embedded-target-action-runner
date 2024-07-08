@@ -411,10 +411,11 @@ Inside the docker run the following commands:
 
     cd /workarea/unit_test/crc
     mkdir build
+    cd build
     cmake ..
     make
 
-The test output indicates that one of the checks in in the CRC unit test is failing. Fix the test by updating the expected crc value
+The test output indicates that one of the checks in in the CRC unit test is failing. Fix the test by updating the expected crc value. Rebuild and test is done by executing `make`.
 
 ## Execute in Github actions
 Add the unit test job in between the build and release jobs:
@@ -437,7 +438,7 @@ Add the unit test job in between the build and release jobs:
               make
           - name: Publish Test Report
             uses: mikepenz/action-junit-report@v4
-            if: success() || failure() # always run even if the previous step fails
+            if: always() # always run even if the previous step fails
             with:
               report_paths: 'unit_test/*/build/tests/cpputest_*.xml'
 
