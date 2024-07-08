@@ -142,7 +142,7 @@ Add the jobs entry and define the **build-sample-application** job and name it *
         name: Build
         runs-on: ubuntu-22.04
 
-The first step in the pipeline is cloning the repo:
+The first step in the pipeline is cloning the repository:
 
         steps:
           - name: Checkout the repository
@@ -266,7 +266,7 @@ For this we create the release job. It starts with downloading the artifacts fro
               prerelease: false
               artifacts: "stm32-firmware/stm32-firmware-*/*"
 
-Commit and push the changes. Check the output in Github actions. The build fails because by default actions are not allowed to write to the repo. You should also have received an email indicating the failed build. To fix this go to the repo's settings: **Settings -> Actions -> General**
+Commit and push the changes. Check the output in Github actions. The build fails because by default actions are not allowed to write to the repository. You should also have received an email indicating the failed build. To fix this go to the repository's settings: **Settings -> Actions -> General**
 
 ![Github actions 4](images/Github_actions_4.png)
 
@@ -326,11 +326,14 @@ Download the binary and see if you get the expected value in the serial output
 We'll be using a free static analysis tool, [cppcheck](https://cppcheck.sourceforge.io/), to show how this type of tool can help with code quality.
 
 ## Execute locally
-Start a docker in the repo's root directory: `docker run -it --rm --entrypoint /bin/sh --name cppcheck -v ${PWD}:/workarea neszt/cppcheck-docker`
+Start a docker in the repository's root directory:
+
+    docker run -it --rm --entrypoint /bin/sh --name cppcheck -v ${PWD}:/workarea neszt/cppcheck-docker
 
 Inside the docker run the following commands:
-- `cd /workarea`
-- `cppcheck --enable=all --inline-suppr --project=application.cppcheck`
+
+    cd /workarea
+    cppcheck --enable=all --inline-suppr --project=application.cppcheck
 
 ## Execute in Github actions
 Add the analyse job before the build job:
@@ -384,28 +387,32 @@ Add a **workflow_dispatch** to the **on** parameter to create a button for branc
 The **Release (y/n)?** question allows to select if a release should be created for the branch build. It defaults to **y**. To allow the **n** option to work the run condition for the release job needs to be updated from: if: **github.ref == 'refs/heads/master'** to **if: github.ref == 'refs/heads/master' || github.event.inputs.release == 'y'** as follows:
 
       release:
-        needs: [build-docs, build-sample_application]
+        needs: build-sample_application
         if: github.ref == 'refs/heads/master' || github.event.inputs.release == 'y'
         name: Release to Github
-        runs-on: ubuntu-20.04
+        runs-on: ubuntu-22.04
         steps:
 
-Create a branch of master and run the pipeline on it. See how the version number is different.
-To manually run the pipeline on your branch go to the actions page and press the **Run workflow** button:
+Create a branch of master and run the pipeline on it. To manually run the pipeline on your branch go to the actions page and press the **Run workflow** button:
 
 ![Github actions 7](images/Github_actions_7.png)
+
+See how the version number is different.
 
 # Add unit test
 For unit testing we'll be using [cpputest](https://cpputest.github.io/). A free tool which works for both C and C++ code.
 
 ## Execute locally
-Start a docker in the repo's root directory: `docker run -it --rm --name ccputest -v ${PWD}:/workarea xanderhendriks/cpputest:1.0`
+Start a docker in the repository's root directory:
+
+    docker run -it --rm --name ccputest -v ${PWD}:/workarea xanderhendriks/cpputest:1.0
 
 Inside the docker run the following commands:
-- `cd /workarea/unit_test/crc`
-- `mkdir build`
-- `cmake ..`
-- `make`
+
+    cd /workarea/unit_test/crc
+    mkdir build
+    cmake ..
+    make
 
 The test output indicates that one of the checks in in the CRC unit test is failing. Fix the test by updating the expected crc value
 
@@ -458,7 +465,7 @@ If you were running the released version we loaded before then you'll see an err
 Now the test should pass. Have a look at the 2 python files in the **system_test** directory to understand what is being tested. The test uses the pytest framework for the test execution.
 
 ## Execute on the RPi action runner
-To execute the test on the target connected to the RPi, first an SD Card needs to be created with an OS for the RPi. After which the RPi can be linked to the repo as an action runner.
+To execute the test on the target connected to the RPi, first an SD Card needs to be created with an OS for the RPi. After which the RPi can be linked to the repository as an action runner.
 
 ### Preparing the SD Card
 The SD Card for this project was created using the Windows version of the [Raspberry Pi Imager](https://www.raspberrypi.com/software/). On the first page of the tool select which RPi version to create an image for, Which image to use and which SD Card to write it to. Here we are using an RPi3 and the Raspberry OS Lite (Legacy, 64-bit):
@@ -492,7 +499,7 @@ Install openocd which is used for programming the NUCLEO board:
 
 NOTE that when `sudo apt upgrade` is run again that the openocd package will be upgraded to a later version which fails during flash write on the STM32 MCU. If this happens just run the above command again to downgrade the openocd to the 0.11.0~rc2-1 again.
 
-In github go to the forked repo's **Settings -> Actions -> Runners** and press the **New self hosted runner**:
+In github go to the forked repository's **Settings -> Actions -> Runners** and press the **New self hosted runner**:
 
 ![Github runners 1](images/Github_runners_1.png)
 
@@ -507,7 +514,7 @@ When running the config make sure add a label for the type of test the device wi
 Instead of the final `./run.sh` command run `sudo ./svc.sh --help` to show the options for configuring the action runner as a service. You'll need the `sudo ./svc.sh install` command. This will make sure the acion runner is installed as a service, which will make it start automatically upon reboot of the RPi. Now either start the service with `sudo ./svc.sh start` or use `sudo reboot` to reboot the device.
 
 ### Pipeline update
-Add the system test job in between the unit_test and release jobs. Unlike the unit test, this test can only start once the binary has been build and as such has the build in its **needs** list. The **runs-on** indicates that we would like the code to run on our self-hosted device with the system label. The **concurrency** makse sure that when multiple pipelines are running in paralell that only one at the time will execute the system test. The steps execute the usual checkout and download the binary from the build step. To make sure we know which version and githash to expect, these numbers are rertieved from the repo and the binary name:
+Add the system test job in between the unit_test and release jobs. Unlike the unit test, this test can only start once the binary has been build and as such has the build in its **needs** list. The **runs-on** indicates that we would like the code to run on our self-hosted device with the system label. The **concurrency** makse sure that when multiple pipelines are running in paralell that only one at the time will execute the system test. The steps execute the usual checkout and download the binary from the build step. To make sure we know which version and githash to expect, these numbers are rertieved from the repository and the binary name:
 
       system-test:
         needs: build-sample-application
@@ -559,7 +566,7 @@ After which the Python environment is setup and the actual test executed:
               mkdir test-system-output
               pytest -rP system_test --version-to-check=${{ steps.determine_version.outputs.version }} --git-hash-to-check=${{ steps.short-sha.outputs.sha }} --junitxml=test-system-output/test_system_junit.xml
 
-Finally the test results which have been configured to be in the junit format are uploaded to the repo together with any other files that were dumped in the **test-system-output** directory:
+Finally the test results which have been configured to be in the junit format are uploaded to the repository together with any other files that were dumped in the **test-system-output** directory:
 
           - name: Publish system test results
             uses: EnricoMi/publish-unit-test-result-action/linux@v2.16.1
