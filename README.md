@@ -282,7 +282,7 @@ Go to the landing page for the repository and see the latest release shown on th
 
 ![Github releases 1](images/Github_releases_1.png)
 
-When you click the **Releases** label or go directly to the [releases](/releases) url then you can see all releases. It is good practice to use the edit button to add a proper description for the release, so the list can be used for release notes.
+When you click the **Releases** label or go directly to the [releases](/../../releases) url then you can see all releases. It is good practice to use the edit button to add a proper description for the release, so the list can be used for release notes.
 
 ![Github releases 2](images/Github_releases_2.png)
 
