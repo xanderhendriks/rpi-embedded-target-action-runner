@@ -1,0 +1,193 @@
+name: Continuous integration pipeline
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      release:
+        description: 'Release (y/n)?'
+        required: true
+        default: 'y'
+jobs:
+  analyse-code:
+    name: Analyse
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4.1.7
+      - name: cppcheck
+        run: |
+          sudo apt-get install -y cppcheck
+          cppcheck --enable=all --inline-suppr --project=application.cppcheck --error-exitcode=-1
+  build-sample-application:
+    needs: analyse-code
+    name: Build
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4.1.7
+      - name: Determine short GIT hash
+        id: short-sha
+        run: |
+          echo "sha=$(echo ${{github.sha}} | sed 's/^\(.\{10\}\).*$/\1/')" >> $GITHUB_OUTPUT
+      - name: Bump version
+        if: github.ref == 'refs/heads/master'
+        id: tag_version
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: true
+          default_bump: minor
+          fetch_all_tags: true
+      - name: Version handling
+        id: version_handling
+        run: |
+          # Use the bumped version when on master or otherwise 0.0.0
+          if [ -z ${{ steps.tag_version.outputs.new_tag }} ]
+          then
+            version=0.0.0
+            file_postfix=${{ steps.short-sha.outputs.sha }}-dev
+          else
+            version=${{ steps.tag_version.outputs.new_version }}
+            file_postfix=$version
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "file_postfix=$file_postfix" >> $GITHUB_OUTPUT
+          echo "major=$(echo $version | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1/')" >> $GITHUB_OUTPUT
+          echo "minor=$(echo $version | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\2/')" >> $GITHUB_OUTPUT
+          echo "bugfix=$(echo $version | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\3/')" >> $GITHUB_OUTPUT
+      - name: Build the sample_application binary
+        uses: xanderhendriks/action-build-stm32cubeide@v12.0
+        with:
+          project-path: 'application'
+          project-target: 'sample_application'
+        env:
+          ENV_VERSION_MAJOR: ${{ steps.version_handling.outputs.major }}
+          ENV_VERSION_MINOR: ${{ steps.version_handling.outputs.minor }}
+          ENV_VERSION_BUGFIX: ${{ steps.version_handling.outputs.bugfix }}
+          ENV_SHORT_GIT_HASH: ${{ steps.short-sha.outputs.sha }}
+      - name: Rename and copy files
+        run: |
+          mkdir stm32-firmware
+          cp application/Release/sample_application.bin stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.bin
+          cp application/Release/sample_application.elf stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.elf
+          cp application/Release/sample_application.list stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.list
+          cp application/Release/sample_application.map stm32-firmware/sample_application-${{ steps.version_handling.outputs.file_postfix }}.map
+      - name: Upload sample_application artifacts
+        uses: actions/upload-artifact@v4.3.3
+        with:
+          name: stm32-firmware-sample_application-${{ steps.version_handling.outputs.file_postfix }}
+          path: stm32-firmware
+  unit-test:
+    needs: analyse-code
+    name: Unit test
+    runs-on: ubuntu-20.04
+    container:
+      image: xanderhendriks/cpputest:1.0
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4.1.7
+      - name: Build and run unit test
+        run: |
+          cd unit_test/crc
+          mkdir build
+          cd build
+          cmake ..
+          make
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v4
+        if: always() # always run even if the previous step fails
+        with:
+          report_paths: 'unit_test/*/build/tests/cpputest_*.xml'
+  system-test:
+    needs: build-sample-application
+    name: System test
+    concurrency: system
+    runs-on: [self-hosted, system]
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4.1.7
+      - name: Determine short GIT hash
+        id: short-sha
+        run: |
+          echo "sha=$(echo ${{github.sha}} | sed 's/^\(.\{10\}\).*$/\1/')" >> $GITHUB_OUTPUT
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.7
+        with:
+          path: stm32-firmware
+      - name: Determine version
+        id: determine_version
+        run: |
+          if [ -n "$(find stm32-firmware -name 'stm32-firmware-sample_application-*-dev')" ]
+          then
+              version=0.0.0
+              file_postfix=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\(.*\)/\1/')
+          else
+              version=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\([0-9\.]*\)/\1/')
+              file_postfix=$version
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "file_postfix=$file_postfix" >> $GITHUB_OUTPUT
+      - name: Update firmware on target
+        run: |
+          openocd -f interface/stlink.cfg -f target/stm32f3x.cfg -c "program $(find stm32-firmware/stm32-firmware-sample_application-*/ -name sample_application*.bin) verify reset exit 0x8000000"
+      - name: Create virtual environment and install dependencies
+        run: |
+          python3 -m venv ~/actions-runner/_venv
+          . ~/actions-runner/_venv/bin/activate
+          python3 -m pip install --upgrade pip==22.1.2
+          pip install -r python/requirements.txt
+      - name: Run System Test
+        run: |
+          . ~/actions-runner/_venv/bin/activate
+          mkdir test-system-output
+          pytest -rP system_test --version-to-check=${{ steps.determine_version.outputs.version }} --git-hash-to-check=${{ steps.short-sha.outputs.sha }} --junitxml=test-system-output/test_system_junit.xml
+      - name: Publish system test results
+        uses: EnricoMi/publish-unit-test-result-action/linux@v2.16.1
+        if: always()
+        with:
+          check_name: System test results
+          junit_files: test-system-output/test_system_junit.xml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload system test artifacts
+        uses: actions/upload-artifact@v4.3.3
+        if: always()
+        with:
+          name: test-system-output
+          path: test-system-output
+  release:
+    needs: [unit-test, system-test]
+    if: github.ref == 'refs/heads/master' || github.event.inputs.release == 'y'
+    name: Release to Github
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.7
+        with:
+          path: stm32-firmware
+      - name: Determine version
+        id: determine_version
+        run: |
+          if [ -n "$(find stm32-firmware -name 'stm32-firmware-sample_application-*-dev')" ]
+          then
+              version=0.0.0
+              file_postfix=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\(.*\)/\1/')
+          else
+              version=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\([0-9\.]*\)/\1/')
+              file_postfix=$version
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "file_postfix=$file_postfix" >> $GITHUB_OUTPUT
+      - name: Release to Github
+        id: create_release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: v${{ steps.determine_version.outputs.file_postfix }}
+          name: v${{ steps.determine_version.outputs.file_postfix }}
+          commit: ${{ github.sha }}
+          draft: false
+          prerelease: false
+          artifacts: "stm32-firmware/stm32-firmware-*/*"
