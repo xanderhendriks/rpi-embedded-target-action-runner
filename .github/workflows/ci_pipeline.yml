@@ -62,3 +62,37 @@ jobs:
         with:
           name: stm32-firmware-sample_application-${{ steps.version_handling.outputs.file_postfix }}
           path: stm32-firmware
+  release:
+    needs: [build-sample-application]
+    if: github.ref == 'refs/heads/master'
+    name: Release to Github
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.7
+        with:
+          path: stm32-firmware
+      - name: Determine version
+        id: determine_version
+        run: |
+          if [ -n "$(find stm32-firmware -name 'stm32-firmware-sample_application-*-dev')" ]
+          then
+              version=0.0.0
+              file_postfix=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\(.*\)/\1/')
+          else
+              version=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\([0-9\.]*\)/\1/')
+              file_postfix=$version
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "file_postfix=$file_postfix" >> $GITHUB_OUTPUT
+      - name: Release to Github
+        id: create_release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: v${{ steps.determine_version.outputs.file_postfix }}
+          name: v${{ steps.determine_version.outputs.file_postfix }}
+          commit: ${{ github.sha }}
+          draft: false
+          prerelease: false
+          artifacts: "stm32-firmware/stm32-firmware-*/*"
