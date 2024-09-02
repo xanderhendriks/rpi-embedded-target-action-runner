@@ -5,7 +5,7 @@ The main goal of this workshop is to show some ways that could assist in making 
 First there is the firmware that implements the product's functionality. Bugs in the firmware will affect every product running this code and will greatly affect how the end user perceives the product. Both in a positive and a negative way. Nowadays with iterative ways of working it is possible to release more features in a shorter time. Delivering a pipeline of constant improvements to the product for the customer through over the air (OTA) updates. The downside of this is that it has become impossible to spend a lot of time testing every release, as this would mean spending more time on testing than on writing code. Luckily there are a lot of tools available today that can be used to automate this process. We will look at how Github actions can be used to build firmware images in the cloud in a reliable and reproducible manner. And how a Raspberry Pi (RPi) can be used as a remote action runner to verify the functionality of every firmware build in a fully automated way.
 
 ### Different types of testing
-During firmware development different types of testing can be identified. Some of them are very easy to implement and can be run in an automated manner. Meaning that with a minimal amount of effort these tests can be run on any change of the code. Resulting in a higher confidence that the code willl work as designed.
+During firmware development different types of testing can be identified. Some of them are very easy to implement and can be run in an automated manner. Meaning that with a minimal amount of effort these tests can be run on any change of the code. Resulting in a higher confidence that the code will work as designed.
 
 #### Compiler
 It may sound silly, but the compiler can be part of the testing regime. Most modern compilers generate warnings on code which may not do what the developer intended. By enabling the feature to treat all warnings as errors, these kind of bugs can be avoided.
@@ -63,27 +63,32 @@ Fork the [xanderhendriks/rpi-embedded-target-action-runner](https://github.com/x
 
 And clone your fork to get a local copy:
 
-`git clone https://github.com/<your_github_username>/rpi-embedded-target-action-runner.git`
+    git clone https://github.com/<your_github_username>/rpi-embedded-target-action-runner.git
 
-# Working with the STM32CubeIde project
+# Lab 1 - Build and run the sample application locally
+## Overview
+In this lab, we will start with importing the sample_project into STM32CubeIde. After which we will connect the NUCLEO-F303K8 dev board and run the code through the debugger. TeraTerm, or your own preferred terminal emulator, will show the version number of the running code.
+
+## Instructions
+### Working with the STM32CubeIde project
 Start the [STM32CubeIde](https://www.st.com/en/development-tools/stm32cubeide.html) and select a directory to use as workspace:
 
 ![STM32CubeIde launcher](images/STM32CubeIde_launcher.png)
 
-## Importing the project
-And import the project from application directory:
+#### Importing the project
+And import the project from the application directory:
 
 ![STM32CubeIde open project from file system 1](images/STM32CubeIde_open_project_from_file_system_1.png)
 
 ![STM32CubeIde open project from file system 2](images/STM32CubeIde_open_project_from_file_system_2.png)
 
-## Build the project
-Press the build button and check the ouput in the cosole window at the bottom:
+#### Build the project
+Press the build button and check the ouput in the console window at the bottom:
 
 ![STM32CubeIde build](images/STM32CubeIde_build.png)
 
-## Run the code in the debugger
-To run the code on the target connect the USB cable, press the debug button and select **Debug Configurations...**
+#### Run the code in the debugger
+To run the code on the target, connect the NUCLEO-F303K8 to your laptop with the USB cable. Then press the debug button and select **Debug Configurations...**
 
 ![STM32CubeIde debug 1](images/STM32CubeIde_debug_1.png)
 
@@ -95,9 +100,10 @@ The IDE will take some time to process and when it's done it will stop at the fi
 
 Once this has all been setup press the play button (green triangle) in the IDE. Check that the green LED on the NUCLEO board is blinking once a second and look at the output on the terminal. What is the version of the code?
 
-## Release versioning
+# Versioning
 Projects will have different requirements for version numbering. The convention used in this workshop makes a clear distinction between official releases in the cloud on the master branch, releasing of the code on a branch and locally build images.
 
+## Build types
 ### Official release on master branch
 When a build is done on the master branch the minor version number will be incremented for the build resulting in 0.1.0, 0.2.0, etc. The resulting binary will be renamed to show the version number sample_application-0.1.0.bin
 
@@ -122,20 +128,30 @@ Some of the common tools used for contious integration:
 - [CircleCI](https://circleci.com/)
 - [Jenkins](https://www.jenkins.io/) (Self hosted)
 
+# Lab 2 - Build the sample application in github actions
+## Overview
+In this lab, we will be creating a pipeline file to instruct Github actions how to build our sample application. After downloading the release build from Github we'll see that the running code now shows a proper version number in the terminal.
 
-# Github action for building code
-Create a file called .github/workflows/ci_pipeline.yml and add the following pipeline name:
+## Instructions
+Switch to the Lab 2 branch to avoid having to copy/paste the code from the instructions. After making sure you are in the root of your fork, execute the following GIT command:
+
+    git merge origin/lab_2
+
+### Pipeline YAML file
+Walk through the file .github/workflows/ci_pipeline.yml andas explained below:
+
+The name states the pipeline name that will be shown in Github actions:
 
     name: Continuous integration pipeline
 
-Configure when to run the action. For now we'll start with all pushes to the master branch:
+The next statements configure when to run the action. For now we'll start with all pushes to the master branch:
 
     on:
       push:
         branches:
           - master
 
-Add the jobs entry and define the **build-sample-application** job and name it **Build**. This is the name that will show on the webpage. Keep the name short as long names get abbreviated. We'll run the action on an ubuntu-22.04 cloud runner:
+The jobs entry contains a list of all jobs that need to be run as part of the pipeline. Our first one is the **build-sample-application** job with the name **Build**. This is the name that will show on the webpage. Keep the name short as long names get abbreviated. The action will be run on an ubuntu-22.04 cloud runner:
 
     jobs:
       build-sample-application:
@@ -212,11 +228,11 @@ And finally the files are uploaded to Github to allow them to be used in other j
               name: stm32-firmware-sample_application-${{ steps.version_handling.outputs.file_postfix }}
               path: stm32-firmware
 
-Commit and push the changes and check the execution of the action in github. It should look like this:
+Push the changes with `git push` and check the execution of the action in github. It should look like this:
 
 ![Github actions 1](images/Github_actions_1.png)
 
-## Build artifacts
+### Build artifacts
 Download the articact from the **stm32-firmware-sample_application-0.1.0** link at the bottom of the page. The downloaded zip contains the following files:
 - sample_application-0.1.0.bin: Binary file which can be deployed to the target
 - sample_application-0.1.0.elf: Binary file including symbols. Used for the debugger.
@@ -224,12 +240,18 @@ Download the articact from the **stm32-firmware-sample_application-0.1.0** link 
 - sample_application-0.1.0.map: Linker output showing the memory locations for all symbols in the code
 
 Unzip the sample_application-0.1.0.bin and copy it to the thumbdrive which is implemented by the ST-LINK on the NUCLEO board. You should see the application green application LED stop blinking and the green LED next to the USB connector blink green/red for a couple of seconds.
-After the green/red blinking has stopped the green application LED will start blinking again. The NUCLEO is now running the code which was build in the cloud. Looks at the serial terminal and notice how it is now showing **image_id: 1, version: 0.1.0-57ba8d2ac5** instead of the **image_id: 1, version: 0.0.0-debugbuild** from the local execution.
+After the green/red blinking has stopped the green application LED will start blinking again. The NUCLEO is now running the code which was build in the cloud. Looks at the serial terminal and notice how it is now showing **image_id: 1, version: 0.1.0-<githash>** instead of the **image_id: 1, version: 0.0.0-debugbuild** from the local execution.
 
-# Creating a github release
-The build artifacts and logs are only kept for 90 days. So if we would want to keep the artifacts we need to create a release.
+# Lab 3 - Creating a github release
+## Overview
+In this lab, we will create a github release to make sure the build artifacts are kept indefinitely. The artifacts and logs as created in lab 1 will only be kept for 90 days. Creating a release allows you to make sure that important artifacts are kept until deleted.
 
-For this we create the release job. It starts with downloading the artifacts from the build job, followed by some code to get the version number from the filename. The third and final step creates the github release and uploads the artifacts:
+## Instructions
+Switch to the Lab 3 branch to avoid having to copy/paste the code from the instructions. After making sure you are in the root of your fork, execute the following GIT command:
+
+    git merge origin/lab_3
+
+The release job starts with downloading the artifacts from the build job, followed by some code to get the version number from the filename. The third and final step creates the github release and uploads the artifacts:
 
       release:
         needs: [build-sample-application]
@@ -266,7 +288,7 @@ For this we create the release job. It starts with downloading the artifacts fro
               prerelease: false
               artifacts: "stm32-firmware/stm32-firmware-*/*"
 
-Commit and push the changes. Check the output in Github actions. The build fails because by default actions are not allowed to write to the repository. You should also have received an email indicating the failed build. To fix this go to the repository's settings: **Settings -> Actions -> General**
+Push the changes with `git push` and check the output in Github actions. The build fails because by default actions are not allowed to write to the repository. You should also have received an email indicating the failed build. To fix this go to the repository's settings: **Settings -> Actions -> General**
 
 ![Github actions 4](images/Github_actions_4.png)
 
@@ -286,7 +308,79 @@ When you click the **Releases** label or go directly to the [releases](/../../re
 
 ![Github releases 2](images/Github_releases_2.png)
 
-## Build output
+# Lab 4 - Run the pipeline for branches and Pull Requests
+## Overview
+In this lab, we will add running the action for pull requests and branches. The first to make sure that the code which is being reviewed in a Pull Request actually builds and passes all the test. The second to allow the evaluation of a new feature or bug fix without having to merge the code into master for a release.
+
+## Instructions
+Create a new branch and merge the Lab 4 branch in to avoid having to copy/paste the code from the instructions. After making sure you are in the root of your fork, execute the following GIT command:
+
+    git switch -c my_lab_4
+    git merge origin/lab_4
+
+### Pull request builds
+Github is told to run the ci pipeline for a PR with the addition of **pull_request** to the **on** parameter for the pipeline:
+
+    on:
+      push:
+        branches:
+          - master
+      pull_request:
+
+The **if: github.ref == 'refs/heads/master'** line in the release job makes sure that no release is created for Pull Request builds.
+
+Push the changes with `git push --set-upstream origin my_lab_4` and go to the landing page for the repository:
+
+![Github pull request 1](images/Github_pull_request_1.png)
+
+It should show the new **my_lab_4** branch with a **Compare & pull request button**. Press the button followed by the **Create pull request** button. Now when you check Actions you'll see the following:
+
+![Github actions 7](images/Github_actions_7.png)
+
+Indicating that the application was build succesfully and that Release to Github was skipped.
+
+See how the version number is different from a release build.
+
+Press the merge button in the Pull Request to merge the updated pipeline file into master.
+
+![Github pull request 2](images/Github_pull_request_2.png)
+
+### Branch builds
+For the branch builds **workflow_dispatch** has been added to the **on** parameter to create a button for these builds:
+
+    on:
+      push:
+        branches:
+          - master
+      pull_request:
+      workflow_dispatch:
+        inputs:
+          release:
+            description: 'Release (y/n)?'
+            required: true
+            default: 'y'
+
+The **Release (y/n)?** question allows to select if a release should be created for the branch build. It defaults to **y**. To allow the **n** option to work the run condition for the release job needs to be updated from: if: **github.ref == 'refs/heads/master'** to **if: github.ref == 'refs/heads/master' || github.event.inputs.release == 'y'** as follows:
+
+      release:
+        needs: build-sample_application
+        if: github.ref == 'refs/heads/master' || github.event.inputs.release == 'y'
+        name: Release to Github
+        runs-on: ubuntu-22.04
+        steps:
+
+Create a branch of master and run the pipeline on it. To manually run the pipeline on your branch go to the actions page and press the **Run workflow** button:
+
+![Github actions 8](images/Github_actions_8.png)
+
+See how the version number is different from a release build.
+
+
+# Lab 5 - Use compiler for 'testing'
+## Overview
+
+## Instructions
+
 Check the ouput of the sample application build step and scroll down to the warning:
 
 ![Github actions 2](images/Github_actions_2.png)
@@ -322,10 +416,14 @@ In this particular case the pragma is now hiding a bug. Remove the pragma and fi
 Commit and push the changes to make the build pass again.
 Download the binary and see if you get the expected value in the serial output
 
-# Static analysis
+# Lab 6 - Static analysis
+## Overview
+
+## Instructions
+
 We'll be using a free static analysis tool, [cppcheck](https://cppcheck.sourceforge.io/), to show how this type of tool can help with code quality.
 
-## Execute locally
+### Execute locally
 Start a docker in the repository's root directory:
 
     docker run -it --rm --entrypoint /bin/sh --name cppcheck -v ${PWD}:/workarea neszt/cppcheck-docker
@@ -335,7 +433,7 @@ Inside the docker run the following commands:
     cd /workarea
     cppcheck --enable=all --inline-suppr --project=application.cppcheck
 
-## Execute in Github actions
+### Execute in Github actions
 Add the analyse job before the build job:
 
       analyse-code:
@@ -356,53 +454,15 @@ And update the build to wait for both analyse step execution:
 
 Push the change to ci_pipeline.yml and check that the step fails with the same recommendations. Fix the code and push again.
 
-# Run the pipeline for Pull Requests
-Another best practice is to use pull requests to allow changes on branches to be reviewed before being merged into the master branch. To make sure the code passes the static analysis and can be build, the code on the PR can be told to run the ci pipeline by **adding pull_request** to **on** parameter for the pipeline:
 
-    on:
-      push:
-        branches:
-          - master
-      pull_request:
+# Lab 7 - Add unit test
+## Overview
 
-The **if: github.ref == 'refs/heads/master'** line in the release job makes sure that no release is created for Pull Request builds.
+## Instructions
 
-# Branch builds
-In some cases it is desirable to evaluate a new feature or bug fixe without having to merge the code into master for a release. This is where branch releases come in.
-
-Add a **workflow_dispatch** to the **on** parameter to create a button for branch builds:
-
-    on:
-      push:
-        branches:
-          - master
-      pull_request:
-      workflow_dispatch:
-        inputs:
-          release:
-            description: 'Release (y/n)?'
-            required: true
-            default: 'y'
-
-The **Release (y/n)?** question allows to select if a release should be created for the branch build. It defaults to **y**. To allow the **n** option to work the run condition for the release job needs to be updated from: if: **github.ref == 'refs/heads/master'** to **if: github.ref == 'refs/heads/master' || github.event.inputs.release == 'y'** as follows:
-
-      release:
-        needs: build-sample_application
-        if: github.ref == 'refs/heads/master' || github.event.inputs.release == 'y'
-        name: Release to Github
-        runs-on: ubuntu-22.04
-        steps:
-
-Create a branch of master and run the pipeline on it. To manually run the pipeline on your branch go to the actions page and press the **Run workflow** button:
-
-![Github actions 7](images/Github_actions_7.png)
-
-See how the version number is different.
-
-# Add unit test
 For unit testing we'll be using [cpputest](https://cpputest.github.io/). A free tool which works for both C and C++ code.
 
-## Execute locally
+### Execute locally
 Start a docker in the repository's root directory:
 
     docker run -it --rm --name ccputest -v ${PWD}:/workarea xanderhendriks/cpputest:1.0
@@ -417,7 +477,7 @@ Inside the docker run the following commands:
 
 The test output indicates that one of the checks in in the CRC unit test is failing. Fix the test by updating the expected crc value. Rebuild and test is done by executing `make`.
 
-## Execute in Github actions
+### Execute in Github actions
 Add the unit test job in between the build and release jobs:
 
       unit-test:
@@ -447,12 +507,16 @@ And update the release to wait for both the build and the unit test execution:
       release:
         needs: [unit-test, build-sample-application]
 
-# Add system test
+# Lab 8 - Add system test
+## Overview
+
+## Instructions
+
 In the case of the sample application we only have 1 fake sensor to read. As the device doesn't publish the value of the sensor in any way, there is no way for the system test to access the value. For ease of testing and debugging it is good practice to add an interface that allows functions to be executed on the target device. This allows for faster testing by forcing things to happen in a shorter timespan than required for normal operation. Think of an IoT product only advertising every 15 minutes.
 
 Our sample application has a very basic interface for this. It uses the same serial interface we have seen working in the terminal before. Try it by running the code and typing the characters v and s in the terminal. The device will respond with the version information and its sensror value. These are the commands we'll use in the system test to veify the code.
 
-## Execute locally
+### Execute locally
 To execute the system test locally run the following commands:
 - `cd <rpi-embedded-target-action-runner directory>`
 - Create a virtual Python environment: `python -m venv .venv`
@@ -465,10 +529,10 @@ If you were running the released version we loaded before then you'll see an err
 
 Now the test should pass. Have a look at the 2 python files in the **system_test** directory to understand what is being tested. The test uses the pytest framework for the test execution.
 
-## Execute on the RPi action runner
+### Execute on the RPi action runner
 To execute the test on the target connected to the RPi, first an SD Card needs to be created with an OS for the RPi. After which the RPi can be linked to the repository as an action runner.
 
-### Preparing the SD Card
+#### Preparing the SD Card
 The SD Card for this project was created using the Windows version of the [Raspberry Pi Imager](https://www.raspberrypi.com/software/). On the first page of the tool select which RPi version to create an image for, Which image to use and which SD Card to write it to. Here we are using an RPi3 and the Raspberry OS Lite (Legacy, 64-bit):
 
 ![Raspberry Pi Imager 1](images/rpi_imager_1.png)
@@ -485,7 +549,7 @@ The final dialog is left to default to enable the SSH out of the box for headles
 
 ![Raspberry Pi Imager 3](images/rpi_imager_3.png)
 
-### Install the RPi action runner
+#### Install the RPi action runner
 login to the RPi using ssh. Add the -L to forward port 22 to allow sftp file transfer on localhost:
 
     ssh pi@nxs-<RPi identifier> -L 22:nxs-<RPi identifier>:22
@@ -514,7 +578,7 @@ When running the config make sure add a label for the type of test the device wi
 
 Instead of the final `./run.sh` command run `sudo ./svc.sh --help` to show the options for configuring the action runner as a service. You'll need the `sudo ./svc.sh install` command. This will make sure the acion runner is installed as a service, which will make it start automatically upon reboot of the RPi. Now either start the service with `sudo ./svc.sh start` or use `sudo reboot` to reboot the device.
 
-### Pipeline update
+#### Pipeline update
 Add the system test job in between the unit_test and release jobs. Unlike the unit test, this test can only start once the binary has been build and as such has the build in its **needs** list. The **runs-on** indicates that we would like the code to run on our self-hosted device with the system label. The **concurrency** makse sure that when multiple pipelines are running in paralell that only one at the time will execute the system test. The steps execute the usual checkout and download the binary from the build step. To make sure we know which version and githash to expect, these numbers are rertieved from the repository and the binary name:
 
       system-test:
@@ -585,7 +649,7 @@ Finally the test results which have been configured to be in the junit format ar
 
 Hook the NUCLEO up to the USB on the RPi and psuh the updated pipeline. The complete output should now look like this:
 
-![Github actions 8](images/Github_actions_8.png)
+![Github actions 9](images/Github_actions_9.png)
 
-## Make it your own
+# Make it your own
 You can use the different interfaces on the Raspberry Pi, such as USB, SPI, GPIO, UART, Ethernet to add other hardware that interacts with the system test. Have a look at the [PowerControl in the conftest.py](https://github.com/xanderhendriks/rpi-embedded-target-action-runner/blob/master/system_test/conftest.py#L45) for an example of how a GPIO pin is used to control a relay to power cycle the device under test (DUT).
