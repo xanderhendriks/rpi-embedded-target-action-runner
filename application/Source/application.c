@@ -19,13 +19,13 @@ extern UART_HandleTypeDef huart2;
 
 void Application_RunDefaultTask(void)
 {
-	int16_t calculate = 0;
+	int32_t calculate = 0;
 
 	printf("image_id: %d, version: %d.%d.%d-%s\n", (int) IMAGE_ID, (int) VERSION_MAJOR, (int) VERSION_MINOR, (int) VERSION_BUGFIX, SHORT_GIT_HASH_STRING);
 
 	calculate = Sensor_GetValue() + 20;
 
-	printf("Calculated value: %hd\n", calculate);
+	printf("Calculated value: %ld\n", calculate);
 
 	for(;;)
 	{
