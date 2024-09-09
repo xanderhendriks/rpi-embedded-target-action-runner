@@ -133,7 +133,7 @@ Some of the common tools used for contious integration:
 In this lab, we will be creating a pipeline file to instruct Github actions how to build our sample application. After downloading the release build from Github we'll see that the running code now shows a proper version number in the terminal.
 
 ## Instructions
-Switch to the Lab 2 branch to avoid having to copy/paste the code from the instructions. After making sure you are in the root of your fork, execute the following GIT command:
+Merge the Lab 2 branch into master to avoid having to copy/paste the code from the instructions. After making sure you are in the root of your fork, execute the following GIT command:
 
     git merge origin/lab_2
 
@@ -247,7 +247,7 @@ After the green/red blinking has stopped the green application LED will start bl
 In this lab, we will create a github release to make sure the build artifacts are kept indefinitely. The artifacts and logs as created in lab 1 will only be kept for 90 days. Creating a release allows you to make sure that important artifacts are kept until deleted.
 
 ## Instructions
-Switch to the Lab 3 branch to avoid having to copy/paste the code from the instructions. After making sure you are in the root of your fork, execute the following GIT command:
+Merge the Lab 3 branch into master to avoid having to copy/paste the code from the instructions. After making sure you are in the root of your fork, execute the following GIT command:
 
     git merge origin/lab_3
 
@@ -378,24 +378,28 @@ See how the version number is different from a release build.
 
 # Lab 5 - Use compiler for 'testing'
 ## Overview
+In this lab, we will see how the first release actually contains a bug and how using the compiler's build in **warnings** and **treat warnings as errors** functionality can be used to find it. This is a software engineering best practice which makes sure that new warnings always will have to be resolved right away and can't cause bugs down the road.
 
 ## Instructions
-
-Check the ouput of the sample application build step and scroll down to the warning:
+Check the ouput of the build in lab 4 sample application build step and scroll down to the warning:
 
 ![Github actions 2](images/Github_actions_2.png)
 
-This warning is actually causing an error in the output value, which means our first release has got a bug in it. For this reason an engineering best practice is to always to get the compiler to treat all warnings as errors. When doing this new warnings always need to be resolved right away and can't cause bugs down the road.
+This warning is actually causing an error in the output value, which means our first release has got a bug in it. This bug could have been avoided by getting the warning to be treated as an error.
 
-To do this for our source code open the properties dialog by right clicking on the **source directory**. It is important to do this configuration of our own sources as doing this for the whole project will generate errors for the STM32 provided code and we don't want to cleanup their code as well.
+Merge the Lab 5 branch into master to avoid having to copy/paste the code from the instructions. After making sure you are in the root of your fork, execute the following GIT command:
+
+    git merge origin/lab_5
+
+Check in the STM32CudeIde how the warnings have been set for our source code by opening the properties dialog by right clicking on the **source directory**. It is important to do this configuration of our own sources as doing this for the whole project will generate errors for the STM32 provided code and we don't want to cleanup their code as well.
 
 ![STM32CubeIde properties 1](images/STM32CubeIde_properties_1.png)
 
-In the Properties Dialog set the MCU GCC Compiler Warnings as indicated in the following screenshot. Make sure to select **[ All configurations ]**:
+In the Properties Dialog verify that the MCU GCC Compiler Warnings are set as indicated in the following screenshot. Selecting **[ All configurations ]** makes it easier to check/modify for both Debug and Release:
 
 ![STM32CubeIde properties 2](images/STM32CubeIde_properties_2.png)
 
-Commit and push the changes to Github. Check the Action execution.
+Push the changes with `git push`. Check the Action execution.
 
 The action failed. We have now implemented our first level of testing and are using the compiler to filter out any dubious constructs in the code.
 
@@ -418,23 +422,16 @@ Download the binary and see if you get the expected value in the serial output
 
 # Lab 6 - Static analysis
 ## Overview
+In this lab, we will be using a free static analysis tool, [cppcheck](https://cppcheck.sourceforge.io/), to show how this type of tool can help with code quality.
 
 ## Instructions
 
-We'll be using a free static analysis tool, [cppcheck](https://cppcheck.sourceforge.io/), to show how this type of tool can help with code quality.
-
-### Execute locally
-Start a docker in the repository's root directory:
-
-    docker run -it --rm --entrypoint /bin/sh --name cppcheck -v ${PWD}:/workarea neszt/cppcheck-docker
-
-Inside the docker run the following commands:
-
-    cd /workarea
-    cppcheck --enable=all --inline-suppr --project=application.cppcheck
-
 ### Execute in Github actions
-Add the analyse job before the build job:
+Merge the Lab 6 branch into master to avoid having to copy/paste the code from the instructions. After making sure you are in the root of your fork, execute the following GIT command:
+
+    git merge origin/lab_6
+
+See how the analyse job has been added before the build job:
 
       analyse-code:
         name: Analyse
@@ -447,38 +444,44 @@ Add the analyse job before the build job:
               sudo apt-get install -y cppcheck
               cppcheck --enable=all --inline-suppr --project=application.cppcheck --error-exitcode=-1
 
-And update the build to wait for both analyse step execution:
+And the build step has been updated to wait for the analyse step execution:
 
       build-sample-application:
         needs: analyse-code
 
-Push the change to ci_pipeline.yml and check that the step fails with the same recommendations. Fix the code and push again.
+Push the changes with `git push`. Check the Action execution to see the output from cppcheck:
 
-
-# Lab 7 - Add unit test
-## Overview
-
-## Instructions
-
-For unit testing we'll be using [cpputest](https://cpputest.github.io/). A free tool which works for both C and C++ code.
+![Github actions 9](images/Github_actions_9.png)
 
 ### Execute locally
+For faster iterations cppcheck can also be run locally in a docker container:
+
 Start a docker in the repository's root directory:
 
-    docker run -it --rm --name ccputest -v ${PWD}:/workarea xanderhendriks/cpputest:1.0
+    docker run -it --rm --entrypoint /bin/sh --name cppcheck -v ${PWD}:/workarea neszt/cppcheck-docker
 
 Inside the docker run the following commands:
 
-    cd /workarea/unit_test/crc
-    mkdir build
-    cd build
-    cmake ..
-    make
+    cd /workarea
+    cppcheck --enable=all --inline-suppr --project=application.cppcheck
 
-The test output indicates that one of the checks in in the CRC unit test is failing. Fix the test by updating the expected crc value. Rebuild and test is done by executing `make`.
+Check that you get the same output as shown in the action and modify the code to resolve the issues
+
+Push the changes with `git push`. Check the Action to verify that the analyse step now passes.
+
+# Lab 7 - Add unit test
+## Overview
+In this lab, we will add unit testing. These are very powerful tests as they provide a very fast turn around time. The code is build and executed on the developer's computer instead of on the target. Also they allow for an easy way to check corner conditions which is often hard to do on the running target device.
+
+## Instructions
+For unit testing we'll be using [cpputest](https://cpputest.github.io/). A free tool which works for both C and C++ code.
 
 ### Execute in Github actions
-Add the unit test job in between the build and release jobs:
+Merge the Lab 7 branch into master to avoid having to copy/paste the code from the instructions. After making sure you are in the root of your fork, execute the following GIT command:
+
+    git merge origin/lab_7
+
+See how the unit test job has been added in between the build and release jobs:
 
       unit-test:
         needs: analyse-code
@@ -502,19 +505,41 @@ Add the unit test job in between the build and release jobs:
             with:
               report_paths: 'unit_test/*/build/tests/cpputest_*.xml'
 
-And update the release to wait for both the build and the unit test execution:
+And the release was updated to wait for both the build and the unit test execution:
 
       release:
-        needs: [unit-test, build-sample-application]
+        needs: [build-sample-application, unit-test]
+
+Push the changes with `git push`. Check the Action execution to see the output from the unit test, which shows one test is failing:
+
+![Github actions 10](images/Github_actions_10.png)
+
+### Execute locally
+Start a docker in the repository's root directory:
+
+    docker run -it --rm --name ccputest -v ${PWD}:/workarea xanderhendriks/cpputest:1.0
+
+Inside the docker run the following commands:
+
+    cd /workarea/unit_test/crc
+    mkdir build
+    cd build
+    cmake ..
+    make
+
+Check that the output matches the one from the github action. The output indicates that one of the checks in in the CRC unit test is failing. Fix the test by updating the expected crc value. Rebuild and test is done by executing `make`.
+
+Push the changes with `git push` and check that the Action now passes.
 
 # Lab 8 - Add system test
 ## Overview
-
-## Instructions
+In this lab, we will add system testing. These are tests that communicate with the target running the code that was build as part of running the pipeline.
 
 In the case of the sample application we only have 1 fake sensor to read. As the device doesn't publish the value of the sensor in any way, there is no way for the system test to access the value. For ease of testing and debugging it is good practice to add an interface that allows functions to be executed on the target device. This allows for faster testing by forcing things to happen in a shorter timespan than required for normal operation. Think of an IoT product only advertising every 15 minutes.
 
-Our sample application has a very basic interface for this. It uses the same serial interface we have seen working in the terminal before. Try it by running the code and typing the characters v and s in the terminal. The device will respond with the version information and its sensror value. These are the commands we'll use in the system test to veify the code.
+Our sample application has a very basic interface for this. It uses the same serial interface we have seen working in the terminal before. Try it by running the code and typing the characters v and s in the terminal. The device will respond with the version information and its sensror value. These are the commands we'll use in the system test to verify the code.
+
+## Instructions
 
 ### Execute locally
 To execute the system test locally run the following commands:
@@ -579,7 +604,7 @@ When running the config make sure add a label for the type of test the device wi
 Instead of the final `./run.sh` command run `sudo ./svc.sh --help` to show the options for configuring the action runner as a service. You'll need the `sudo ./svc.sh install` command. This will make sure the acion runner is installed as a service, which will make it start automatically upon reboot of the RPi. Now either start the service with `sudo ./svc.sh start` or use `sudo reboot` to reboot the device.
 
 #### Pipeline update
-Add the system test job in between the unit_test and release jobs. Unlike the unit test, this test can only start once the binary has been build and as such has the build in its **needs** list. The **runs-on** indicates that we would like the code to run on our self-hosted device with the system label. The **concurrency** makse sure that when multiple pipelines are running in paralell that only one at the time will execute the system test. The steps execute the usual checkout and download the binary from the build step. To make sure we know which version and githash to expect, these numbers are rertieved from the repository and the binary name:
+Add the system test job in between the unit_test and release jobs. Unlike the unit test, this test can only start once the binary has been build and as such has the build in its **needs** list. The **runs-on** indicates that we would like the code to run on our self-hosted device with the system label. The **concurrency** makes sure that when multiple pipelines are running in paralell that only one at the time will execute the system test. The steps execute the usual checkout and download the binary from the build step. To make sure we know which version and githash to expect, these numbers are rertieved from the repository and the binary name:
 
       system-test:
         needs: build-sample-application
@@ -647,9 +672,9 @@ Finally the test results which have been configured to be in the junit format ar
               name: test-system-output
               path: test-system-output
 
-Hook the NUCLEO up to the USB on the RPi and psuh the updated pipeline. The complete output should now look like this:
+Hook the NUCLEO up to the USB on the RPi and push the updated pipeline. The complete output should now look like this:
 
-![Github actions 9](images/Github_actions_9.png)
+![Github actions 11](images/Github_actions_11.png)
 
 # Make it your own
 You can use the different interfaces on the Raspberry Pi, such as USB, SPI, GPIO, UART, Ethernet to add other hardware that interacts with the system test. Have a look at the [PowerControl in the conftest.py](https://github.com/xanderhendriks/rpi-embedded-target-action-runner/blob/master/system_test/conftest.py#L45) for an example of how a GPIO pin is used to control a relay to power cycle the device under test (DUT).
