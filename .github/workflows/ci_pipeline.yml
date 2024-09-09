@@ -80,8 +80,29 @@ jobs:
         with:
           name: stm32-firmware-sample_application-${{ steps.version_handling.outputs.file_postfix }}
           path: stm32-firmware
+  unit-test:
+    needs: analyse-code
+    name: Unit test
+    runs-on: ubuntu-20.04
+    container:
+      image: xanderhendriks/cpputest:1.0
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4.1.7
+      - name: Build and run unit test
+        run: |
+          cd unit_test/crc
+          mkdir build
+          cd build
+          cmake ..
+          make
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v4
+        if: always() # always run even if the previous step fails
+        with:
+          report_paths: 'unit_test/*/build/tests/cpputest_*.xml'
   release:
-    needs: [build-sample-application]
+    needs: [build-sample-application, unit-test]
     if: github.ref == 'refs/heads/master' || github.event.inputs.release == 'y'
     name: Release to Github
     runs-on: ubuntu-22.04
