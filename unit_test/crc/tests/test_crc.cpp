@@ -21,7 +21,7 @@ TEST(crc, Crc_Calculate16Bit)
     } testValues[] = {{0, "test", 4, 39686},
                       {0, "this is another test string", 27, 31365},
                       {39686, "this is another test string", 27, 25393},
-                      {0, "testthis is another test string", 31, 25396}};
+                      {0, "testthis is another test string", 31, 25393}};
 
     for (index = 0; index < sizeof(testValues) / sizeof(testValues[0]); index++)
     {

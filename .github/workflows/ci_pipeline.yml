@@ -101,8 +101,64 @@ jobs:
         if: always() # always run even if the previous step fails
         with:
           report_paths: 'unit_test/*/build/tests/cpputest_*.xml'
+  system-test:
+    needs: build-sample-application
+    name: System test
+    concurrency: system
+    runs-on: [self-hosted, system]
+    steps:
+      - name: Checkout the repository
+        uses: actions/checkout@v4.1.7
+      - name: Determine short GIT hash
+        id: short-sha
+        run: |
+          echo "sha=$(echo ${{github.sha}} | sed 's/^\(.\{10\}\).*$/\1/')" >> $GITHUB_OUTPUT
+      - name: Download artifacts
+        uses: actions/download-artifact@v4.1.7
+        with:
+          path: stm32-firmware
+      - name: Determine version
+        id: determine_version
+        run: |
+          if [ -n "$(find stm32-firmware -name 'stm32-firmware-sample_application-*-dev')" ]
+          then
+              version=0.0.0
+              file_postfix=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\(.*\)/\1/')
+          else
+              version=$(find stm32-firmware -name "stm32-firmware-sample_application-*" | sed 's/stm32-firmware\/stm32-firmware-sample_application-\([0-9\.]*\)/\1/')
+              file_postfix=$version
+          fi
+          echo "version=$version" >> $GITHUB_OUTPUT
+          echo "file_postfix=$file_postfix" >> $GITHUB_OUTPUT
+      - name: Update firmware on target
+        run: |
+          openocd -f interface/stlink.cfg -f target/stm32f3x.cfg -c "program $(find stm32-firmware/stm32-firmware-sample_application-*/ -name sample_application*.bin) verify reset exit 0x8000000"
+      - name: Create virtual environment and install dependencies
+        run: |
+          python3 -m venv ~/actions-runner/_venv
+          . ~/actions-runner/_venv/bin/activate
+          python3 -m pip install --upgrade pip==22.1.2
+          pip install -r python/requirements.txt
+      - name: Run System Test
+        run: |
+          . ~/actions-runner/_venv/bin/activate
+          mkdir test-system-output
+          pytest -rP system_test --version-to-check=${{ steps.determine_version.outputs.version }} --git-hash-to-check=${{ steps.short-sha.outputs.sha }} --junitxml=test-system-output/test_system_junit.xml
+      - name: Publish system test results
+        uses: EnricoMi/publish-unit-test-result-action/linux@v2.16.1
+        if: always()
+        with:
+          check_name: System test results
+          junit_files: test-system-output/test_system_junit.xml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload system test artifacts
+        uses: actions/upload-artifact@v4.3.3
+        if: always()
+        with:
+          name: test-system-output
+          path: test-system-output
   release:
-    needs: [build-sample-application, unit-test]
+    needs: [unit-test, system-test]
     if: github.ref == 'refs/heads/master' || github.event.inputs.release == 'y'
     name: Release to Github
     runs-on: ubuntu-22.04
