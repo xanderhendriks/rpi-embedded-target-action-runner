@@ -1,8 +1,9 @@
 # Ensuring Product Reliability
-The main goal of this workshop is to show some ways that could assist in making sure that shipped products are of sufficient quality to delight customers. Both from an electronics and firmware perspective. The approach to achieve this consists of two key components.
+The main goal of this workshop is to show some ways that can assist in making sure that shipped products are of sufficient quality to delight customers. Both from an electronics and firmware perspective. The approach to achieve this consists of two key components.
 
 ## Firmware verification
 First there is the firmware that implements the product's functionality. Bugs in the firmware will affect every product running this code and will greatly affect how the end user perceives the product. Both in a positive and a negative way. Nowadays with iterative ways of working it is possible to release more features in a shorter time. Delivering a pipeline of constant improvements to the product for the customer through over the air (OTA) updates. The downside of this is that it has become impossible to spend a lot of time testing every release, as this would mean spending more time on testing than on writing code. Luckily there are a lot of tools available today that can be used to automate this process. We will look at how Github actions can be used to build firmware images in the cloud in a reliable and reproducible manner. And how a Raspberry Pi (RPi) can be used as a remote action runner to verify the functionality of every firmware build in a fully automated way.
+Next to this we'll also look at how other levels of testing can be introduced, which can point out potential problems before even having build the code for the target hardware.
 
 ### Different types of testing
 During firmware development different types of testing can be identified. Some of them are very easy to implement and can be run in an automated manner. Meaning that with a minimal amount of effort these tests can be run on any change of the code. Resulting in a higher confidence that the code will work as designed.
@@ -21,29 +22,29 @@ In unit testing you take a single source file and check its functionality by cal
 [Wikipidea](https://en.wikipedia.org/wiki/List_of_unit_testing_frameworks) has a good list of available tools. Most of them are free to use.
 
 #### Integration testing
-Integration testing is often overlooked, while it is actually a very powerful way of testing the code. You combine a small set of source files together and build them into a mini application for a very specific purpose. This could for instance be to verify the time it takes for a safety feature to detect a problem and bring the system in a safe state. Or testing the throughput of the code controlling a certain interface to see if it consistently meeds the speed requirements for the system.
+Integration testing is often overlooked, while it is actually a very powerful way of testing the code. You combine a small set of source files together and build them into a mini application for a very specific purpose. This could for instance be to verify the time it takes for a safety feature to detect a problem and bring the system in a safe state. Or testing the throughput of the code controlling a certain interface to see if it consistently meets the speed requirements for the system.
 
 #### System testing
-For the system test we need to be able to verify that all it's interfaces are working as expected. This is typically done as a black box test where without knowlegde of the code the external interfaces are monitored and controlled. This can be done in different ways. You could hook up hardware that mimics the communication of sensors and actuators or you could have the real hardware with some extra hardware around it which can be controlled or monitored from the system test.
+For the system test we need to be able to verify that all its interfaces are working as expected. This is typically done as a black box test, where without knowledge of the code the external interfaces are monitored and controlled. This can be done in different ways. You could hook up hardware that mimics the communication of sensors and actuators or you could have the real hardware with some extra hardware around it which can be controlled or monitored from the system test.
 This can be done manually by following a previously defined test protocol, but it is a lot more powerful if this test can be automated and run on every release.
 
 #### Bench testing
-This is probably the most common testing. An engineer implements a new feature or fixes a bug and tests on his bench if it is working as expected. Often the focus is on checking if it works under normal circumstances. Corner cases are often overlooked or can't be tested as they are hard to generate. The biggest problem with this type of testing is that it it's not documented. Making it hard to know what has exactly been tested and near to impossible to reproduce.
+This is probably the most common testing. An engineer implements a new feature or fixes a bug and tests on his bench if it is working as expected. Often the focus is on checking if it works under normal circumstances. Corner cases are often overlooked or can't be tested as they are hard to generate. The biggest problem with this type of testing is, that it is not documented. Making it hard to know what has exactly been tested and near to impossible to reproduce at a later time.
 
 ## Final acceptance test
-Having firmware that is going to be a big hit with the customer is only half the picture. If the hardware is not working properly the end result will still be a dissatisfied user. To avoid this every product has to be tested before it is packed and shipped. This is often done with expensive test equipment which uses a customised bed of nails to probe all the important signals on the board. Something that is not cost effective for an early stage startup until product market fit has been reached and the product is being manufactured in larger batch sizes. We will explore a cost effective test environment utilising an RPi running a Flask server with a simple React based UI.
+Having firmware that is going to be a big hit with the customer is only half the picture. If the hardware is not working properly the end result will still be a dissatisfied user. To avoid this every product has to be tested before it is packed and shipped. This is often done with expensive test equipment which uses a customised bed of nails to probe all the important signals on the board. Something that is not cost effective for an early stage startup until product market fit has been reached and the product is being manufactured in larger batch sizes. We will explore a cost effective test environment utilising an RPi running a simple web server implemented with [NiceGUI](https://nicegui.io/).
 
 The code for the workshop for this part can be found in github repository: [xanderhendriks/rpi-final-acceptance-test](https://github.com/xanderhendriks/rpi-final-acceptance-test).
 
 # Hardware used
 ## Raspberry Pi
-The [Raspberry Pi 3 Model B](https://www.raspberrypi.com/products/raspberry-pi-3-model-b/) is a relatively cheap, but capabable compute module which is powerfull enough to deploy firmware from [Github actions](https://github.com/features/actions) on the target. It is out of the box supported by the [Github action runner](https://github.com/actions/runner).
+The [Raspberry Pi 3 Model B](https://www.raspberrypi.com/products/raspberry-pi-3-model-b/) is a relatively cheap, but capable compute module which is powerful enough to deploy firmware from [Github actions](https://github.com/features/actions) on the target. It is out of the box supported by the [Github action runner](https://github.com/actions/runner).
 
 ![Raspberry Pi 3 Model B](images/RPi3ModelB.png)
 
 ## STM32 NUCLEO Board
-The [STM32 NUCLEO](https://www.st.com/en/evaluation-tools/stm32-nucleo-boards.html) series of boards cover a wide range of 32 bit ARM core based MCU's. Devices are divided in the categories: mainstream, ultra low power and high performace. They offer many different perpherals, flash sizes and pin counts.
-The [NUCLEO-F303K8](https://www.st.com/en/evaluation-tools/nucleo-f303k8.html) used here is near the lower end. It has a small footprint and its connectors are Arduino Nano compatible. Because the NUCLEAO boards all contain an embedded ST-LINK they support source level debugging with breakpoints and stepping through the code.
+The [STM32 NUCLEO](https://www.st.com/en/evaluation-tools/stm32-nucleo-boards.html) series of boards cover a wide range of 32 bit ARM core based MCU's. Devices are divided in the categories: mainstream, ultra low power and high performace. They offer many different peripherals, flash sizes and pin counts.
+The [NUCLEO-F303K8](https://www.st.com/en/evaluation-tools/nucleo-f303k8.html) used here is near the lower end. It has a small footprint and its connectors are Arduino Nano compatible. Because the NUCLEO boards all contain an embedded ST-LINK they support source level debugging with breakpoints and stepping through the code.
 
 ![NUCLEO-F303K8](images/NUCLEO-F303K8.png)
 
@@ -83,7 +84,7 @@ And import the project from the application directory:
 ![STM32CubeIde open project from file system 2](images/STM32CubeIde_open_project_from_file_system_2.png)
 
 #### Build the project
-Press the build button and check the ouput in the console window at the bottom:
+Press the build button and check the ouptut in the console window at the bottom:
 
 ![STM32CubeIde build](images/STM32CubeIde_build.png)
 
@@ -138,7 +139,7 @@ Merge the Lab 2 branch into master to avoid having to copy/paste the code from t
     git merge origin/lab_2
 
 ### Pipeline YAML file
-Walk through the file .github/workflows/ci_pipeline.yml andas explained below:
+Walk through the file .github/workflows/ci_pipeline.yml and check the explanation below:
 
 The name states the pipeline name that will be shown in Github actions:
 
@@ -240,7 +241,7 @@ Download the articact from the **stm32-firmware-sample_application-0.1.0** link 
 - sample_application-0.1.0.map: Linker output showing the memory locations for all symbols in the code
 
 Unzip the sample_application-0.1.0.bin and copy it to the thumbdrive which is implemented by the ST-LINK on the NUCLEO board. You should see the application green application LED stop blinking and the green LED next to the USB connector blink green/red for a couple of seconds.
-After the green/red blinking has stopped the green application LED will start blinking again. The NUCLEO is now running the code which was build in the cloud. Looks at the serial terminal and notice how it is now showing **image_id: 1, version: 0.1.0-<githash>** instead of the **image_id: 1, version: 0.0.0-debugbuild** from the local execution.
+After the green/red blinking has stopped the green application LED will start blinking again. The NUCLEO is now running the code which was build in the cloud. Looks at the serial terminal and notice how it is now showing **image_id: 1, version: 0.1.0-\<githash>** instead of the **image_id: 1, version: 0.0.0-debugbuild** from the local execution.
 
 # Lab 3 - Creating a github release
 ## Overview
@@ -535,9 +536,9 @@ Push the changes with `git push` and check that the Action now passes.
 ## Overview
 In this lab, we will add system testing. These are tests that communicate with the target running the code that was build as part of running the pipeline.
 
-In the case of the sample application we only have 1 fake sensor to read. As the device doesn't publish the value of the sensor in any way, there is no way for the system test to access the value. For ease of testing and debugging it is good practice to add an interface that allows functions to be executed on the target device. This allows for faster testing by forcing things to happen in a shorter timespan than required for normal operation. Think of an IoT product only advertising every 15 minutes.
+In the case of the sample application we only have 1 fake sensor to read. As the device doesn't publish the value of the sensor in any way, there is no way for the system test to access the value. For ease of testing and debugging it is good practice to add an interface that allows functions to be executed on the target device. This allows for faster testing by forcing things to happen in a shorter timespan than required for normal operation. Think of an IoT product only advertising every couple of minutes or hours.
 
-Our sample application has a very basic interface for this. It uses the same serial interface we have seen working in the terminal before. Try it by running the code and typing the characters v and s in the terminal. The device will respond with the version information and its sensror value. These are the commands we'll use in the system test to verify the code.
+Our sample application has a very basic interface for this. It uses the same serial interface we have seen working in the terminal before. Try it by running the code and typing the characters v and s in the terminal. The device will respond with the version information and its sensor value. These are the commands we'll use in the system test to verify the code.
 
 ## Instructions
 
@@ -579,15 +580,15 @@ login to the RPi using ssh. Add the -L to forward port 22 to allow sftp file tra
 
     ssh pi@nxs-<RPi identifier> -L 22:nxs-<RPi identifier>:22
 
-After starting the RPi for the first time it is good practice to run the update and upgrade commands to make sure that the latest (security) updates are installed for the OS:
+After starting the RPi for the first time it is good practice to run the update and upgrade commands to make sure that the latest (security) updates are installed for the OS. As the upgrade will take quite some time, for now we'll only run update:
 
-    sudo apt update ; sudo apt upgrade -y
+    sudo apt update
 
 Install openocd which is used for programming the NUCLEO board:
 
-    sudo apt install -y openocd=0.11.0~rc2-1 python3-venv python3-dev
+    sudo apt install -y --allow-downgrades openocd=0.11.0~rc2-1 python3-venv python3-dev
 
-NOTE that when `sudo apt upgrade` is run again that the openocd package will be upgraded to a later version which fails during flash write on the STM32 MCU. If this happens just run the above command again to downgrade the openocd to the 0.11.0~rc2-1 again.
+NOTE that when `sudo apt upgrade` is run again that the openocd package will be upgraded to a later version which fails during flash write on the STM32 MCU. If this happens just run the above command again to downgrade the openocd to the 0.11.0~rc2-1 once more.
 
 In github go to the forked repository's **Settings -> Actions -> Runners** and press the **New self hosted runner**:
 
@@ -604,7 +605,7 @@ When running the config make sure add a label for the type of test the device wi
 Instead of the final `./run.sh` command run `sudo ./svc.sh --help` to show the options for configuring the action runner as a service. You'll need the `sudo ./svc.sh install` command. This will make sure the acion runner is installed as a service, which will make it start automatically upon reboot of the RPi. Now either start the service with `sudo ./svc.sh start` or use `sudo reboot` to reboot the device.
 
 #### Pipeline update
-Add the system test job in between the unit_test and release jobs. Unlike the unit test, this test can only start once the binary has been build and as such has the build in its **needs** list. The **runs-on** indicates that we would like the code to run on our self-hosted device with the system label. The **concurrency** makes sure that when multiple pipelines are running in paralell that only one at the time will execute the system test. The steps execute the usual checkout and download the binary from the build step. To make sure we know which version and githash to expect, these numbers are rertieved from the repository and the binary name:
+Have a look at the pipeline file, where the system test job was added in between the unit_test and release jobs. Unlike the unit test, this test can only start once the binary has been build and as such has the build in its **needs** list. The **runs-on** indicates that we would like the code to run on our self-hosted device with the system label. The **concurrency** makes sure that when multiple pipelines are running in parallel that only one at the time will execute the system test. The steps execute the usual checkout and download the binary from the build step. To make sure we know which version and githash to expect, these numbers are retrieved from the repository and the binary name:
 
       system-test:
         needs: build-sample-application
@@ -672,7 +673,7 @@ Finally the test results which have been configured to be in the junit format ar
               name: test-system-output
               path: test-system-output
 
-Hook the NUCLEO up to the USB on the RPi and push the updated pipeline. The complete output should now look like this:
+Hook the NUCLEO up to the USB on the RPi and push the updated pipeline with `git push`. The complete output should now look like this:
 
 ![Github actions 11](images/Github_actions_11.png)
 
