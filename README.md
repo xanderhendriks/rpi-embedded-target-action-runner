@@ -559,11 +559,9 @@ Now the test should pass. Have a look at the 2 python files in the **system_test
 To execute the test on the target connected to the RPi, first an SD Card needs to be created with an OS for the RPi. After which the RPi can be linked to the repository as an action runner.
 
 #### Preparing the SD Card
-The SD Card for this project was created using the Windows version of the [Raspberry Pi Imager](https://www.raspberrypi.com/software/). On the first page of the tool select which RPi version to create an image for, Which image to use and which SD Card to write it to. Here we are using an RPi3 and the Raspberry OS Lite (Legacy, 64-bit):
+The SD Card for this project was created using the Windows version of the [Raspberry Pi Imager](https://www.raspberrypi.com/software/). On the first page of the tool select which RPi version to create an image for, Which image to use and which SD Card to write it to. Here we are using an RPi3 and the Raspberry OS Lite (64-bit):
 
 ![Raspberry Pi Imager 1](images/rpi_imager_1.png)
-
-Here is a clearer image of the image selection, as it is important to select the Bullseye legacy image. In the latest image the openocd tool can't be configured to the working, 0.11.0~rc2-1, version.
 
 ![Raspberry Pi Imager 1a](images/rpi_imager_1a.png)
 
@@ -586,9 +584,7 @@ After starting the RPi for the first time it is good practice to run the update 
 
 Install openocd which is used for programming the NUCLEO board:
 
-    sudo apt install -y --allow-downgrades openocd=0.11.0~rc2-1 python3-venv python3-dev
-
-NOTE that when `sudo apt upgrade` is run again that the openocd package will be upgraded to a later version which fails during flash write on the STM32 MCU. If this happens just run the above command again to downgrade the openocd to the 0.11.0~rc2-1 once more.
+    sudo apt install -y openocd
 
 In github go to the forked repository's **Settings -> Actions -> Runners** and press the **New self hosted runner**:
 
